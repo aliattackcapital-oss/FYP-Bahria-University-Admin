@@ -12,8 +12,8 @@ export const callLogs: CallLog[] = [
     audioUrl: null,
     transcript: [
       {
-        speaker: 'Sarah',
-        text: 'Hello, this is Sarah from the university helpline. How can I help you today?',
+        speaker: 'Ali',
+        text: 'Hello, this is Ali from the university helpline. How can I help you today?',
         timestampSeconds: 2,
       },
       {
@@ -22,7 +22,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 8,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'Wa alaikum assalam. For BS Computer Science, applicants need intermediate or equivalent with at least 50% marks, plus the university entry test.',
         timestampSeconds: 16,
       },
@@ -32,7 +32,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 32,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'Yes, Mathematics is required for the CS program. Pre-engineering or ICS backgrounds are typically preferred.',
         timestampSeconds: 40,
       },
@@ -53,8 +53,8 @@ export const callLogs: CallLog[] = [
     audioUrl: null,
     transcript: [
       {
-        speaker: 'Sarah',
-        text: 'Hi, you\'ve reached Sarah at the university helpline. What can I do for you?',
+        speaker: 'Ali',
+        text: 'Hi, you\'ve reached Ali at the university helpline. What can I do for you?',
         timestampSeconds: 1,
       },
       {
@@ -63,7 +63,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 9,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'The BBA tuition fee is PKR 95,000 per semester. That does not include the admission or security deposit.',
         timestampSeconds: 17,
       },
@@ -73,7 +73,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 32,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'Yes. Merit scholarships of up to 25% are offered based on intermediate and entry-test scores. Need-based aid is also available.',
         timestampSeconds: 40,
       },
@@ -94,17 +94,17 @@ export const callLogs: CallLog[] = [
     audioUrl: null,
     transcript: [
       {
-        speaker: 'Sarah',
-        text: 'Hello, this is Sarah from the university helpline.',
+        speaker: 'Ali',
+        text: 'Hello, this is Ali from the university helpline.',
         timestampSeconds: 1,
       },
       {
         speaker: 'Caller',
-        text: 'Hi Sarah. When do Fall semester classes start, and what is the registration deadline?',
+        text: 'Hi Ali. When do Fall semester classes start, and what is the registration deadline?',
         timestampSeconds: 7,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'Fall classes begin on 1 September. Course registration closes one week before that, on 25 August.',
         timestampSeconds: 18,
       },
@@ -114,7 +114,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 35,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'Yes, the add/drop window stays open for the first two weeks of the semester.',
         timestampSeconds: 44,
       },
@@ -130,8 +130,8 @@ export const callLogs: CallLog[] = [
     audioUrl: null,
     transcript: [
       {
-        speaker: 'Sarah',
-        text: 'Good afternoon, this is Sarah. How may I assist you?',
+        speaker: 'Ali',
+        text: 'Good afternoon, this is Ali. How may I assist you?',
         timestampSeconds: 2,
       },
       {
@@ -140,7 +140,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 10,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'You can track it on the admissions portal using your CNIC and application ID. Merit lists are also posted there.',
         timestampSeconds: 22,
       },
@@ -150,7 +150,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 38,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'The first merit list for Fall 2026 will be published on 18 August. You\'ll also get an SMS if you\'re selected.',
         timestampSeconds: 52,
       },
@@ -160,7 +160,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 70,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'Selected candidates must pay within five working days of the merit-list announcement to secure their seat.',
         timestampSeconds: 82,
       },
@@ -176,8 +176,8 @@ export const callLogs: CallLog[] = [
     audioUrl: null,
     transcript: [
       {
-        speaker: 'Sarah',
-        text: 'Hello, Sarah here from the university helpline. How can I help?',
+        speaker: 'Ali',
+        text: 'Hello, Ali here from the university helpline. How can I help?',
         timestampSeconds: 1,
       },
       {
@@ -186,7 +186,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 8,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'Yes. The BS Software Engineering evening program runs Monday to Thursday, 5:30 PM to 9:00 PM.',
         timestampSeconds: 18,
       },
@@ -196,7 +196,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 35,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'Yes, the curriculum and degree award are identical. Only the class timings differ.',
         timestampSeconds: 42,
       },
@@ -212,8 +212,8 @@ export const callLogs: CallLog[] = [
     audioUrl: null,
     transcript: [
       {
-        speaker: 'Sarah',
-        text: 'Hi, this is Sarah at the university helpline. What brings you in today?',
+        speaker: 'Ali',
+        text: 'Hi, this is Ali at the university helpline. What brings you in today?',
         timestampSeconds: 2,
       },
       {
@@ -222,7 +222,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 9,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'You\'ll need official transcripts, a NOC from your current university, and at least a 2.5 CGPA. Credits are evaluated course by course.',
         timestampSeconds: 22,
       },
@@ -232,7 +232,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 42,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'Up to 50% of the degree credit hours may be transferred, subject to departmental approval.',
         timestampSeconds: 50,
       },
@@ -253,8 +253,8 @@ export const callLogs: CallLog[] = [
     audioUrl: null,
     transcript: [
       {
-        speaker: 'Sarah',
-        text: 'Hello, you\'re speaking with Sarah from the university helpline.',
+        speaker: 'Ali',
+        text: 'Hello, you\'re speaking with Ali from the university helpline.',
         timestampSeconds: 1,
       },
       {
@@ -263,7 +263,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 7,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'Wa alaikum assalam. You\'ll need a 16-year education degree, official transcripts, CNIC copy, two recommendation letters, and a statement of purpose.',
         timestampSeconds: 16,
       },
@@ -273,7 +273,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 38,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'Yes. A valid GAT General or the university\'s own graduate entry test is required for MS programs.',
         timestampSeconds: 45,
       },
@@ -289,8 +289,8 @@ export const callLogs: CallLog[] = [
     audioUrl: null,
     transcript: [
       {
-        speaker: 'Sarah',
-        text: 'Good morning, this is Sarah from the university helpline. How can I help you?',
+        speaker: 'Ali',
+        text: 'Good morning, this is Ali from the university helpline. How can I help you?',
         timestampSeconds: 2,
       },
       {
@@ -299,7 +299,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 10,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'Late fee payment is allowed with a surcharge of PKR 5,000 until the end of the first week of classes.',
         timestampSeconds: 20,
       },
@@ -309,7 +309,7 @@ export const callLogs: CallLog[] = [
         timestampSeconds: 38,
       },
       {
-        speaker: 'Sarah',
+        speaker: 'Ali',
         text: 'Yes. If dues remain unpaid after the late window, your course registration is cancelled and you must re-register next term.',
         timestampSeconds: 46,
       },

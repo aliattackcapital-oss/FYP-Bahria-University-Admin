@@ -1,5 +1,5 @@
 export interface TranscriptLine {
-  speaker: 'Sarah' | 'Caller'
+  speaker: 'Ali' | 'Caller'
   text: string
   timestampSeconds: number
 }

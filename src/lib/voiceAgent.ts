@@ -5,7 +5,7 @@ export type StatusListener = (status: CallStatus) => void
 export type ErrorListener = (message: string | null) => void
 
 /**
- * Browser voice-call surface for Sarah.
+ * Browser voice-call surface for Ali.
  * Creates a short-lived access token via our API, then connects with the Web SDK.
  * @see https://docs.retellai.com/deploy/web-call
  */

@@ -1,6 +1,6 @@
 import { Clock3, Phone, Timer } from 'lucide-react'
 import { StatCard } from '@/components/StatCard'
-import { TalkToSarahButton } from '@/components/TalkToSarahButton'
+import { TalkToAliButton } from '@/components/TalkToAliButton'
 import { dashboardStats } from '@/lib/mockData'
 
 export function Dashboard() {
@@ -19,7 +19,7 @@ export function Dashboard() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-sm text-muted-foreground">
-          Overview of Sarah&apos;s call activity this week.
+          Overview of Ali&apos;s call activity this week.
         </p>
       </div>
 
@@ -49,7 +49,7 @@ export function Dashboard() {
         />
       </div>
 
-      <TalkToSarahButton />
+      <TalkToAliButton />
     </div>
   )
 }

@@ -1,6 +1,6 @@
 # Bahria University Front Desk Portal
 
-Vite + React dashboard for the FYP mid-defense demo, with live Talk to Sarah web calls.
+Vite + React dashboard for the FYP mid-defense demo, with live Talk to Ali web calls.
 
 ## Local development
 

@@ -24,16 +24,16 @@ export function TranscriptView({ lines }: TranscriptViewProps) {
   return (
     <div className="max-h-80 space-y-3 overflow-y-auto rounded-xl border bg-muted/30 p-4">
       {lines.map((line, index) => {
-        const isSarah = line.speaker === 'Sarah'
+        const isAli = line.speaker === 'Ali'
         return (
           <div
             key={`${line.timestampSeconds}-${index}`}
-            className={cn('flex', isSarah ? 'justify-start' : 'justify-end')}
+            className={cn('flex', isAli ? 'justify-start' : 'justify-end')}
           >
             <div
               className={cn(
                 'max-w-[90%] rounded-2xl border px-3.5 py-2.5 text-sm leading-relaxed shadow-xs',
-                isSarah
+                isAli
                   ? 'rounded-tl-md bg-background'
                   : 'rounded-tr-md bg-primary text-primary-foreground'
               )}
@@ -42,7 +42,7 @@ export function TranscriptView({ lines }: TranscriptViewProps) {
                 <Badge
                   className={cn(
                     'h-5 border-transparent px-1.5 text-[10px]',
-                    isSarah
+                    isAli
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-primary-foreground/20 text-primary-foreground'
                   )}
@@ -52,7 +52,7 @@ export function TranscriptView({ lines }: TranscriptViewProps) {
                 <span
                   className={cn(
                     'text-[11px]',
-                    isSarah ? 'text-muted-foreground' : 'text-primary-foreground/70'
+                    isAli ? 'text-muted-foreground' : 'text-primary-foreground/70'
                   )}
                 >
                   {formatStamp(line.timestampSeconds)}

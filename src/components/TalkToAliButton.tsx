@@ -24,7 +24,7 @@ function formatElapsed(totalSeconds: number) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-export function TalkToSarahButton() {
+export function TalkToAliButton() {
   const [status, setStatus] = useState<CallStatus>('idle')
   const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState<string | null>(null)
@@ -45,7 +45,7 @@ export function TalkToSarahButton() {
 
   const label =
     status === 'idle'
-      ? 'Talk to Sarah'
+      ? 'Talk to Ali'
       : status === 'connecting'
         ? 'Connecting…'
         : status === 'in_call'
@@ -64,9 +64,9 @@ export function TalkToSarahButton() {
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div className="space-y-1.5">
-          <CardTitle>Talk to Sarah</CardTitle>
+          <CardTitle>Talk to Ali</CardTitle>
           <CardDescription>
-            Start a live conversation with Sarah about admissions, fees,
+            Start a live conversation with Ali about admissions, fees,
             classes, and other university questions.
           </CardDescription>
         </div>
