@@ -1,15 +1,24 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, LogOut, PhoneCall } from 'lucide-react'
+import { LayoutDashboard, LogOut, PhoneCall, Sparkles, Users } from 'lucide-react'
 import { logout } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 import { Brand } from '@/components/Brand'
+import { ThemeSwitch } from '@/components/ThemeSwitch'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/call-logs', label: 'Call Logs', icon: PhoneCall, end: false },
+  { to: '/members', label: 'Members', icon: Users, end: false },
 ]
+
+const creatorsItem = {
+  to: '/creators',
+  label: 'Creators',
+  icon: Sparkles,
+  end: false,
+}
 
 export function AppLayout() {
   const navigate = useNavigate()
@@ -53,6 +62,22 @@ export function AppLayout() {
         </nav>
 
         <div className="p-3">
+          <NavLink
+            to={creatorsItem.to}
+            end={creatorsItem.end}
+            className={({ isActive }) =>
+              cn(
+                'mb-1 flex items-center gap-2 rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                isActive
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                  : 'text-muted-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground'
+              )
+            }
+          >
+            <creatorsItem.icon className="size-4" />
+            {creatorsItem.label}
+          </NavLink>
+          <ThemeSwitch />
           <Button
             variant="ghost"
             className="w-full justify-start text-muted-foreground"
@@ -71,7 +96,7 @@ export function AppLayout() {
           </div>
 
           <nav className="flex items-center gap-1 md:hidden">
-            {navItems.map((item) => (
+            {[...navItems, creatorsItem].map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -90,7 +115,8 @@ export function AppLayout() {
             ))}
           </nav>
 
-          <div className="ms-auto md:hidden">
+          <div className="ms-auto flex items-center gap-2 md:hidden">
+            <ThemeSwitch compact />
             <Button variant="outline" size="sm" onClick={handleLogout}>
               Log out
             </Button>

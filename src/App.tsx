@@ -4,6 +4,8 @@ import { isAuthenticated } from '@/lib/auth'
 import { CallLogs } from '@/pages/CallLogs'
 import { Dashboard } from '@/pages/Dashboard'
 import { Login } from '@/pages/Login'
+import { Creators } from '@/pages/Creators'
+import { Members } from '@/pages/Members'
 
 function ProtectedRoute() {
   if (!isAuthenticated()) {
@@ -20,6 +22,8 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="call-logs" element={<CallLogs />} />
+          <Route path="members" element={<Members />} />
+          <Route path="creators" element={<Creators />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

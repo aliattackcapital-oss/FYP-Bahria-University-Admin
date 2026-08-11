@@ -1,0 +1,58 @@
+import type { Member } from '@/types'
+
+export const members: Member[] = [
+  {
+    id: 'mem-001',
+    name: 'Ali Rashid',
+    email: 'admin@company.com',
+    role: 'Admin',
+    department: 'Front Desk Portal',
+    status: 'Active',
+    joinedAt: '2025-09-01T09:00:00+05:00',
+  },
+  {
+    id: 'mem-002',
+    name: 'Ayesha Khan',
+    email: 'ayesha.khan@bahria.edu.pk',
+    role: 'Front Desk',
+    department: 'Admissions',
+    status: 'Active',
+    joinedAt: '2025-10-14T11:30:00+05:00',
+  },
+  {
+    id: 'mem-003',
+    name: 'Hassan Raza',
+    email: 'hassan.raza@bahria.edu.pk',
+    role: 'Academic',
+    department: 'Computer Science',
+    status: 'Active',
+    joinedAt: '2025-11-03T10:15:00+05:00',
+  },
+  {
+    id: 'mem-004',
+    name: 'Fatima Zahra',
+    email: 'fatima.zahra@bahria.edu.pk',
+    role: 'Front Desk',
+    department: 'Student Affairs',
+    status: 'Active',
+    joinedAt: '2026-01-12T09:45:00+05:00',
+  },
+  {
+    id: 'mem-005',
+    name: 'Usman Ali',
+    email: 'usman.ali@bahria.edu.pk',
+    role: 'IT',
+    department: 'Information Technology',
+    status: 'Active',
+    joinedAt: '2026-02-20T14:00:00+05:00',
+  },
+  {
+    id: 'mem-006',
+    name: 'Sana Malik',
+    email: 'sana.malik@bahria.edu.pk',
+    role: 'Academic',
+    department: 'Registrar Office',
+    status: 'Invited',
+    joinedAt: '2026-08-08T16:20:00+05:00',
+  },
+]

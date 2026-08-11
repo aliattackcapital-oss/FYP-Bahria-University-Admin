@@ -19,6 +19,30 @@ export interface CallLog {
 
 export type CallStatus = 'idle' | 'connecting' | 'in_call' | 'ended'
 
+export type MemberRole = 'Admin' | 'Front Desk' | 'Academic' | 'IT'
+export type MemberStatus = 'Active' | 'Invited'
+
+export interface Member {
+  id: string
+  name: string
+  email: string
+  role: MemberRole
+  department: string
+  status: MemberStatus
+  joinedAt: string
+}
+
+export type CreatorRole = 'student' | 'supervisor'
+
+export interface Creator {
+  id: string
+  name: string
+  enrollment?: string
+  role: CreatorRole
+  /** Filename under `public/creators/`, e.g. `ali-rashid.jpg` */
+  photo: string
+}
+
 export interface DashboardStats {
   totalCalls: number
   averageMinutesPerCall: number
