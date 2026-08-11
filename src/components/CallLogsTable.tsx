@@ -57,6 +57,7 @@ export function CallLogsTable({ logs, onRowClick }: CallLogsTableProps) {
             <TableHead className="h-12 px-4">Name</TableHead>
             <TableHead className="h-12 px-4">Phone</TableHead>
             <TableHead className="h-12 px-4">Email</TableHead>
+            <TableHead className="h-12 px-4">Enrollment</TableHead>
             <TableHead className="h-12 px-4">Date / Time</TableHead>
             <TableHead className="h-12 px-4">Duration</TableHead>
           </TableRow>
@@ -79,6 +80,7 @@ export function CallLogsTable({ logs, onRowClick }: CallLogsTableProps) {
               <TableCell className="px-4 py-4 font-medium">{log.name}</TableCell>
               <TableCell className="px-4 py-4">{log.phone}</TableCell>
               <TableCell className="px-4 py-4">{log.email}</TableCell>
+              <TableCell className="px-4 py-4">{log.enrollment}</TableCell>
               <TableCell className="px-4 py-4">
                 {formatDateTime(log.timestamp)}
               </TableCell>

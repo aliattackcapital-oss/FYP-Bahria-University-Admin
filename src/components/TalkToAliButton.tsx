@@ -5,6 +5,7 @@ import {
   onCallError,
   onStatusChange,
   startCall,
+  syncLastCall,
 } from '@/lib/voiceAgent'
 import type { CallStatus } from '@/types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -28,6 +29,7 @@ export function TalkToAliButton() {
   const [status, setStatus] = useState<CallStatus>('idle')
   const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
 
   useEffect(() => onStatusChange(setStatus), [])
   useEffect(() => onCallError(setError), [])
@@ -57,7 +59,17 @@ export function TalkToAliButton() {
       void startCall()
       return
     }
-    void endCall()
+    void (async () => {
+      await endCall()
+      setSyncing(true)
+      try {
+        await syncLastCall()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not save call report')
+      } finally {
+        setSyncing(false)
+      }
+    })()
   }
 
   return (
@@ -95,6 +107,11 @@ export function TalkToAliButton() {
         </div>
         {status === 'in_call' && (
           <p className="text-xs text-muted-foreground">Live · tap to end call</p>
+        )}
+        {syncing && (
+          <p className="text-xs text-muted-foreground">
+            Saving recording, summary, and transcript…
+          </p>
         )}
         {status === 'connecting' && (
           <p className="text-xs text-muted-foreground">

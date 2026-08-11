@@ -16,9 +16,14 @@ class VoiceAgent {
   private client: RetellWebClient | null = null
   private resetTimer: ReturnType<typeof setTimeout> | null = null
   private wired = false
+  private lastCallId: string | null = null
 
   getStatus(): CallStatus {
     return this.status
+  }
+
+  getLastCallId(): string | null {
+    return this.lastCallId
   }
 
   onStatusChange(listener: StatusListener): () => void {
@@ -83,6 +88,20 @@ class VoiceAgent {
     if (this.status === 'idle') return
     this.setStatus('ended')
     this.clearTimers()
+    const callId = this.lastCallId
+    if (callId) {
+      void fetch('/api/sync-call', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callId, wait: true }),
+      })
+        .then((response) => {
+          if (response.ok) window.dispatchEvent(new Event('call-logs-updated'))
+        })
+        .catch(() => {
+          // Call Logs can still refresh via webhook / polling
+        })
+    }
     this.resetTimer = setTimeout(() => {
       if (this.status === 'ended') this.setStatus('idle')
     }, 1600)
@@ -99,6 +118,7 @@ class VoiceAgent {
       const response = await fetch('/api/create-web-call', { method: 'POST' })
       const data = (await response.json()) as {
         accessToken?: string
+        callId?: string
         error?: string
         details?: string
       }
@@ -106,6 +126,8 @@ class VoiceAgent {
       if (!response.ok || !data.accessToken) {
         throw new Error(data.error || data.details || 'Could not start the call')
       }
+
+      this.lastCallId = data.callId ?? null
 
       const client = this.ensureClient()
       await client.startCall({
@@ -158,4 +180,22 @@ export function onStatusChange(listener: StatusListener) {
 
 export function onCallError(listener: ErrorListener) {
   return voiceAgent.onError(listener)
+}
+
+export function getLastCallId() {
+  return voiceAgent.getLastCallId()
+}
+
+export async function syncLastCall() {
+  const callId = voiceAgent.getLastCallId()
+  if (!callId) return null
+  const response = await fetch('/api/sync-call', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ callId, wait: true }),
+  })
+  const data = (await response.json()) as { error?: string }
+  if (!response.ok) throw new Error(data.error || 'Could not save call report')
+  window.dispatchEvent(new Event('call-logs-updated'))
+  return data
 }

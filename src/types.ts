@@ -9,8 +9,10 @@ export interface CallLog {
   name: string
   phone: string
   email: string
+  enrollment: string
   durationSeconds: number
   timestamp: string
+  summary: string | null
   audioUrl: string | null
   transcript: TranscriptLine[]
 }

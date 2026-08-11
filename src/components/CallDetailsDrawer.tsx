@@ -50,9 +50,19 @@ export function CallDetailsDrawer({ call, open, onClose }: CallDetailsDrawerProp
             <section className="space-y-3 rounded-xl border bg-muted/30 p-4">
               <InfoRow label="Phone" value={call.phone} />
               <InfoRow label="Email" value={call.email} />
+              <InfoRow label="Enrollment" value={call.enrollment} />
               <InfoRow label="Date & time" value={formatDateTime(call.timestamp)} />
               <InfoRow label="Duration" value={formatDuration(call.durationSeconds)} />
             </section>
+
+            {call.summary && (
+              <section className="space-y-2">
+                <h3 className="text-sm font-semibold">Summary</h3>
+                <p className="rounded-xl border bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
+                  {call.summary}
+                </p>
+              </section>
+            )}
 
             <section className="space-y-2">
               <h3 className="text-sm font-semibold">Recording</h3>
