@@ -20,7 +20,6 @@ class VoiceAgent {
   private wired = false
   private lastCallId: string | null = null
   private muted = false
-  private agentTalking = false
 
   getStatus(): CallStatus {
     return this.status
@@ -75,7 +74,6 @@ class VoiceAgent {
   }
 
   private setAgentTalking(talking: boolean) {
-    this.agentTalking = talking
     this.talkingListeners.forEach((listener) => listener(talking))
   }
 
