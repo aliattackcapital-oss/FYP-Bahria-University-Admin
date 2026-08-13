@@ -6,6 +6,7 @@ create table if not exists public.call_logs (
   phone text not null default '—',
   email text not null default '—',
   enrollment text not null default '—',
+  intent text not null default '—',
   duration_seconds integer not null default 0,
   started_at timestamptz not null default now(),
   summary text,

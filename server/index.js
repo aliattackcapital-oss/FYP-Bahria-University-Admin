@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import cors from 'cors'
 import express from 'express'
-import { handleCreateWebCall, handleListCallLogs, handleRefreshCallLogs, handleSyncCall, handleWebhook } from './lib/handlers.js'
+import { handleCreateWebCall, handleDashboardStats, handleListCallLogs, handleRefreshCallLogs, handleSyncCall, handleWebhook } from './lib/handlers.js'
 import { isSupabaseConfigured } from './lib/supabase.js'
 
 const app = express()
@@ -22,6 +22,7 @@ app.get('/api/health', (_req, res) => {
 
 app.post('/api/create-web-call', (req, res) => handleCreateWebCall(req, res))
 app.get('/api/call-logs', (req, res) => handleListCallLogs(req, res))
+app.get('/api/dashboard-stats', (req, res) => handleDashboardStats(req, res))
 app.post('/api/sync-call', (req, res) => handleSyncCall(req, res))
 app.post('/api/refresh-call-logs', (req, res) => handleRefreshCallLogs(req, res))
 app.get('/api/webhook', (req, res) => handleWebhook(req, res))

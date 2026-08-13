@@ -40,11 +40,9 @@ export function ThemeSwitch({ compact = false }: { compact?: boolean }) {
   if (compact) return switchControl
 
   return (
-    <div className="mb-1 flex items-center justify-between gap-3 rounded-xl px-3 py-2.5">
-      <div className="flex min-w-0 items-center gap-2.5 text-sm font-medium text-muted-foreground">
-        <Moon className="size-4 shrink-0" />
-        Dark mode
-      </div>
+    <div className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-muted-foreground">
+      <Moon className="size-4 shrink-0" />
+      <span className="min-w-0 flex-1 text-start">Dark mode</span>
       {switchControl}
     </div>
   )

@@ -3,6 +3,7 @@ import { RetellWebClient } from 'retell-client-js-sdk'
 
 export type StatusListener = (status: CallStatus) => void
 export type ErrorListener = (message: string | null) => void
+export type TalkingListener = (talking: boolean) => void
 
 /**
  * Browser voice-call surface for Ali.
@@ -13,10 +14,13 @@ class VoiceAgent {
   private status: CallStatus = 'idle'
   private listeners = new Set<StatusListener>()
   private errorListeners = new Set<ErrorListener>()
+  private talkingListeners = new Set<TalkingListener>()
   private client: RetellWebClient | null = null
   private resetTimer: ReturnType<typeof setTimeout> | null = null
   private wired = false
   private lastCallId: string | null = null
+  private muted = false
+  private agentTalking = false
 
   getStatus(): CallStatus {
     return this.status
@@ -40,6 +44,27 @@ class VoiceAgent {
     }
   }
 
+  onAgentTalking(listener: TalkingListener): () => void {
+    this.talkingListeners.add(listener)
+    return () => {
+      this.talkingListeners.delete(listener)
+    }
+  }
+
+  isMuted(): boolean {
+    return this.muted
+  }
+
+  mute(): void {
+    this.client?.mute()
+    this.muted = true
+  }
+
+  unmute(): void {
+    this.client?.unmute()
+    this.muted = false
+  }
+
   private setStatus(status: CallStatus) {
     this.status = status
     this.listeners.forEach((listener) => listener(status))
@@ -47,6 +72,11 @@ class VoiceAgent {
 
   private setError(message: string | null) {
     this.errorListeners.forEach((listener) => listener(message))
+  }
+
+  private setAgentTalking(talking: boolean) {
+    this.agentTalking = talking
+    this.talkingListeners.forEach((listener) => listener(talking))
   }
 
   private ensureClient(): RetellWebClient {
@@ -59,7 +89,15 @@ class VoiceAgent {
       this.wired = true
       client.on('call_started', () => {
         this.setError(null)
+        this.muted = false
+        this.setAgentTalking(false)
         this.setStatus('in_call')
+      })
+      client.on('agent_start_talking', () => {
+        this.setAgentTalking(true)
+      })
+      client.on('agent_stop_talking', () => {
+        this.setAgentTalking(false)
       })
       client.on('call_ended', () => {
         this.handleEnded()
@@ -86,6 +124,8 @@ class VoiceAgent {
 
   private handleEnded() {
     if (this.status === 'idle') return
+    this.muted = false
+    this.setAgentTalking(false)
     this.setStatus('ended')
     this.clearTimers()
     const callId = this.lastCallId
@@ -180,6 +220,22 @@ export function onStatusChange(listener: StatusListener) {
 
 export function onCallError(listener: ErrorListener) {
   return voiceAgent.onError(listener)
+}
+
+export function onAgentTalking(listener: TalkingListener) {
+  return voiceAgent.onAgentTalking(listener)
+}
+
+export function muteCall() {
+  voiceAgent.mute()
+}
+
+export function unmuteCall() {
+  voiceAgent.unmute()
+}
+
+export function isCallMuted() {
+  return voiceAgent.isMuted()
 }
 
 export function getLastCallId() {

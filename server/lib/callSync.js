@@ -1,6 +1,9 @@
 import { getSupabaseAdmin } from './supabase.js'
 
-const PLACEHOLDER = /^(not given|n\/a|na|none|unknown|null|undefined|—|-)$/i
+const PLACEHOLDER =
+  /^(not given|n\/a|na|none|unknown|null|undefined|empty|blank|not detected|no intent|—|-)$/i
+
+const INTENT_KEYS = ['intent', 'category', 'topic', 'query_type', 'call_intent']
 
 const SPOKEN_NUMBERS = {
   zero: '0',
@@ -22,16 +25,44 @@ function cleanValue(value) {
   return trimmed
 }
 
+const INTENT_LABELS = {
+  admissions: 'Admissions',
+  fees: 'Fees & finance',
+  finance: 'Fees & finance',
+  'fees & finance': 'Fees & finance',
+  'fees and finance': 'Fees & finance',
+  academics: 'Academics & timetable',
+  timetable: 'Academics & timetable',
+  academic: 'Academics & timetable',
+  'academics & timetable': 'Academics & timetable',
+  'academics and timetable': 'Academics & timetable',
+}
+
+function normalizeIntent(value) {
+  const cleaned = cleanValue(value)
+  if (!cleaned) return ''
+  const key = cleaned.toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim()
+  return INTENT_LABELS[key] || cleaned
+}
+
 function pickCustom(data, keys) {
-  if (!data || typeof data !== 'object') return ''
+  const picked = pickCustomField(data, keys)
+  return picked.found ? picked.value : ''
+}
+
+function pickCustomField(data, keys) {
+  if (!data || typeof data !== 'object') return { found: false, value: '' }
   for (const key of keys) {
     const match = Object.entries(data).find(([k]) => k.toLowerCase() === key)
     if (!match) continue
     const raw = match[1]
-    const cleaned = cleanValue(raw == null ? '' : String(raw))
-    if (cleaned) return cleaned
+    return { found: true, value: cleanValue(raw == null ? '' : String(raw)) }
   }
-  return ''
+  return { found: false, value: '' }
+}
+
+function hasCustomKey(data, keys) {
+  return pickCustomField(data, keys).found
 }
 
 function spokenDigits(text) {
@@ -112,35 +143,50 @@ export function mapCallToLog(call) {
   const transcript = mapTranscript(call)
   const extracted = extractFromTranscript(transcript)
 
-  const name =
-    pickCustom(custom, ['name', 'caller_name', 'customer_name', 'full_name', 'student_name']) ||
-    pickCustom(vars, ['name', 'customer_name', 'caller_name']) ||
-    pickCustom(metadata, ['name', 'customer_name']) ||
-    extracted.name ||
-    (call?.call_type === 'web_call' ? 'Web caller' : 'Caller')
+  const nameField = pickCustomField(custom, [
+    'name',
+    'caller_name',
+    'customer_name',
+    'full_name',
+    'student_name',
+  ])
+  const phoneField = pickCustomField(custom, ['phone', 'phone_number', 'mobile'])
+  const emailField = pickCustomField(custom, ['email', 'email_address'])
+  const enrollmentField = pickCustomField(custom, [
+    'enrollment',
+    'enrollment_number',
+    'enrollment_no',
+    'enrolment',
+    'student_id',
+    'registration_number',
+  ])
+  const intentField = pickCustomField(custom, INTENT_KEYS)
 
-  const phone =
-    pickCustom(custom, ['phone', 'phone_number', 'mobile']) ||
-    cleanValue(call?.from_number) ||
-    cleanValue(call?.to_number) ||
-    extracted.phone ||
-    '—'
+  const name = nameField.found
+    ? nameField.value || '—'
+    : pickCustom(vars, ['name', 'customer_name', 'caller_name']) ||
+      pickCustom(metadata, ['name', 'customer_name']) ||
+      extracted.name ||
+      (call?.call_type === 'web_call' ? 'Web caller' : 'Caller')
 
-  const email =
-    pickCustom(custom, ['email', 'email_address']) ||
-    pickCustom(vars, ['email']) ||
-    extracted.email ||
-    '—'
+  const phone = phoneField.found
+    ? phoneField.value || '—'
+    : cleanValue(call?.from_number) ||
+      cleanValue(call?.to_number) ||
+      extracted.phone ||
+      '—'
 
-  const enrollment =
-    pickCustom(custom, [
-      'enrollment',
-      'enrollment_number',
-      'enrollment_no',
-      'enrolment',
-      'student_id',
-      'registration_number',
-    ]) || '—'
+  const email = emailField.found
+    ? emailField.value || '—'
+    : pickCustom(vars, ['email']) || extracted.email || '—'
+
+  const enrollment = enrollmentField.found
+    ? enrollmentField.value || '—'
+    : '—'
+
+  const intent = intentField.found
+    ? normalizeIntent(intentField.value) || '—'
+    : '—'
 
   const startedAt = call?.start_timestamp
     ? new Date(call.start_timestamp).toISOString()
@@ -152,6 +198,7 @@ export function mapCallToLog(call) {
     phone,
     email,
     enrollment,
+    intent,
     duration_seconds: durationSeconds(call),
     started_at: startedAt,
     summary: analysis.call_summary ?? null,
@@ -170,6 +217,7 @@ export function toClientCallLog(row) {
     phone: row.phone,
     email: row.email,
     enrollment: row.enrollment ?? '—',
+    intent: row.intent ?? '—',
     durationSeconds: row.duration_seconds ?? 0,
     timestamp: row.started_at,
     summary: row.summary ?? null,
@@ -182,13 +230,19 @@ function isWeak(value) {
   return !cleanValue(value) || ['web caller', 'caller', '—'].includes(String(value).trim().toLowerCase())
 }
 
+function keepUnlessAnalysisEmpty(incoming, existing, analysisSentField) {
+  if (analysisSentField && isWeak(incoming)) return '—'
+  if (isWeak(incoming) && existing && !isWeak(existing)) return existing
+  return incoming || '—'
+}
+
 export async function persistCallLog(row) {
   const supabase = getSupabaseAdmin()
   if (!supabase) throw new Error('Supabase is not configured')
 
   const { data: existing } = await supabase
     .from('call_logs')
-    .select('name, phone, email, enrollment, summary, audio_url, transcript, analyzed, raw_payload')
+    .select('name, phone, email, enrollment, intent, summary, audio_url, transcript, analyzed, raw_payload')
     .eq('id', row.id)
     .maybeSingle()
 
@@ -203,13 +257,51 @@ export async function persistCallLog(row) {
 
   const payload = {
     ...row,
-    name: isWeak(row.name) && existing?.name && !isWeak(existing.name) ? existing.name : row.name,
-    phone: isWeak(row.phone) && existing?.phone && !isWeak(existing.phone) ? existing.phone : row.phone,
-    email: isWeak(row.email) && existing?.email && !isWeak(existing.email) ? existing.email : row.email,
-    enrollment:
-      isWeak(row.enrollment) && existing?.enrollment && !isWeak(existing.enrollment)
-        ? existing.enrollment
-        : row.enrollment,
+    name: keepUnlessAnalysisEmpty(
+      row.name,
+      existing?.name,
+      hasCustomKey(row.raw_payload?.call_analysis?.custom_analysis_data, [
+        'name',
+        'caller_name',
+        'customer_name',
+        'full_name',
+        'student_name',
+      ]),
+    ),
+    phone: keepUnlessAnalysisEmpty(
+      row.phone,
+      existing?.phone,
+      hasCustomKey(row.raw_payload?.call_analysis?.custom_analysis_data, [
+        'phone',
+        'phone_number',
+        'mobile',
+      ]),
+    ),
+    email: keepUnlessAnalysisEmpty(
+      row.email,
+      existing?.email,
+      hasCustomKey(row.raw_payload?.call_analysis?.custom_analysis_data, [
+        'email',
+        'email_address',
+      ]),
+    ),
+    enrollment: keepUnlessAnalysisEmpty(
+      row.enrollment,
+      existing?.enrollment,
+      hasCustomKey(row.raw_payload?.call_analysis?.custom_analysis_data, [
+        'enrollment',
+        'enrollment_number',
+        'enrollment_no',
+        'enrolment',
+        'student_id',
+        'registration_number',
+      ]),
+    ),
+    intent: keepUnlessAnalysisEmpty(
+      row.intent,
+      existing?.intent,
+      hasCustomKey(row.raw_payload?.call_analysis?.custom_analysis_data, INTENT_KEYS),
+    ),
     summary: row.summary || existing?.summary || null,
     audio_url: audioUrl || existing?.audio_url || null,
     transcript:
@@ -252,13 +344,90 @@ async function storeRecording(supabase, callId, sourceUrl) {
   }
 }
 
+function emptyDashboardStats(labels) {
+  return {
+    totalCalls: 0,
+    averageMinutesPerCall: 0,
+    totalMinutesConsumed: 0,
+    callsTrend: labels.map(() => 0),
+    avgMinutesTrend: labels.map(() => 0),
+    totalMinutesTrend: labels.map(() => 0),
+    labels,
+  }
+}
+
+function lastSevenUtcDays() {
+  const days = []
+  const now = new Date()
+  for (let i = 6; i >= 0; i -= 1) {
+    const date = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i),
+    )
+    days.push(date.toISOString().slice(0, 10))
+  }
+  return days
+}
+
+function weekdayLabel(isoDay) {
+  const [year, month, day] = isoDay.split('-').map(Number)
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-US', {
+    weekday: 'short',
+    timeZone: 'UTC',
+  })
+}
+
+function isCompletedCall(row) {
+  return (row.duration_seconds ?? 0) > 0 && row.call_status !== 'ongoing'
+}
+
+export async function getDashboardStats() {
+  const labels = lastSevenUtcDays().map(weekdayLabel)
+  if (!getSupabaseAdmin()) return emptyDashboardStats(labels)
+
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase
+    .from('call_logs')
+    .select('duration_seconds, started_at, call_status')
+
+  if (error) throw new Error(error.message)
+
+  const rows = (data ?? []).filter(isCompletedCall)
+  const totalSeconds = rows.reduce((sum, row) => sum + (row.duration_seconds ?? 0), 0)
+  const totalMinutes = totalSeconds / 60
+  const totalCalls = rows.length
+
+  const days = lastSevenUtcDays()
+  const byDay = Object.fromEntries(
+    days.map((day) => [day, { count: 0, seconds: 0 }]),
+  )
+  for (const row of rows) {
+    const day = row.started_at ? new Date(row.started_at).toISOString().slice(0, 10) : ''
+    if (!byDay[day]) continue
+    byDay[day].count += 1
+    byDay[day].seconds += row.duration_seconds ?? 0
+  }
+
+  return {
+    totalCalls,
+    averageMinutesPerCall: totalCalls ? totalMinutes / totalCalls : 0,
+    totalMinutesConsumed: Math.round(totalMinutes),
+    callsTrend: days.map((day) => byDay[day].count),
+    avgMinutesTrend: days.map((day) => {
+      const bucket = byDay[day]
+      return bucket.count ? bucket.seconds / 60 / bucket.count : 0
+    }),
+    totalMinutesTrend: days.map((day) => Math.round(byDay[day].seconds / 60)),
+    labels: days.map(weekdayLabel),
+  }
+}
+
 export async function listCallLogs() {
   const supabase = getSupabaseAdmin()
   if (!supabase) throw new Error('Supabase is not configured')
 
   const { data, error } = await supabase
     .from('call_logs')
-    .select('id, name, phone, email, enrollment, duration_seconds, started_at, summary, audio_url, transcript, analyzed, call_status')
+    .select('id, name, phone, email, enrollment, intent, duration_seconds, started_at, summary, audio_url, transcript, analyzed, call_status')
     .order('started_at', { ascending: false })
 
   if (error) throw new Error(error.message)

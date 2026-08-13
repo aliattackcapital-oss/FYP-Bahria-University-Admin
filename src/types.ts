@@ -10,6 +10,7 @@ export interface CallLog {
   phone: string
   email: string
   enrollment: string
+  intent: string
   durationSeconds: number
   timestamp: string
   summary: string | null

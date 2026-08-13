@@ -51,6 +51,7 @@ export function CallDetailsDrawer({ call, open, onClose }: CallDetailsDrawerProp
               <InfoRow label="Phone" value={call.phone} />
               <InfoRow label="Email" value={call.email} />
               <InfoRow label="Enrollment" value={call.enrollment} />
+              <InfoRow label="Intent" value={call.intent || '—'} />
               <InfoRow label="Date & time" value={formatDateTime(call.timestamp)} />
               <InfoRow label="Duration" value={formatDuration(call.durationSeconds)} />
             </section>

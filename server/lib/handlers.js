@@ -1,5 +1,6 @@
 import { isSupabaseConfigured } from './supabase.js'
 import {
+  getDashboardStats,
   listCallLogs,
   mapCallToLog,
   persistCallLog,
@@ -52,6 +53,7 @@ export async function handleCreateWebCall(_req, res) {
           phone: '—',
           email: '—',
           enrollment: '—',
+          intent: '—',
           duration_seconds: 0,
           started_at: new Date().toISOString(),
           summary: null,
@@ -73,6 +75,22 @@ export async function handleCreateWebCall(_req, res) {
   } catch (error) {
     console.error('create-web-call error:', error)
     return res.status(500).json({ error: 'Unexpected error creating web call' })
+  }
+}
+
+export async function handleDashboardStats(_req, res) {
+  if (!isSupabaseConfigured()) {
+    return res.status(200).json({
+      configured: false,
+      stats: await getDashboardStats(),
+    })
+  }
+  try {
+    const stats = await getDashboardStats()
+    return res.json({ stats, configured: true })
+  } catch (error) {
+    console.error('dashboard stats failed:', error)
+    return res.status(500).json({ error: error.message || 'Failed to load dashboard stats' })
   }
 }
 

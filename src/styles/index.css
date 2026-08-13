@@ -43,3 +43,22 @@
 .animate-pulse-ring {
   animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+@keyframes voice-bar {
+  0%,
+  100% {
+    transform: scaleY(0.28);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.voice-bar {
+  transform-origin: center;
+  animation: voice-bar 1.4s ease-in-out infinite;
+}
+
+.voice-bar-live {
+  animation-duration: 0.7s;
+}
