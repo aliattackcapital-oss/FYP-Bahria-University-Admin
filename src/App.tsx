@@ -5,6 +5,7 @@ import { CallLogs } from '@/pages/CallLogs'
 import { Dashboard } from '@/pages/Dashboard'
 import { Login } from '@/pages/Login'
 import { Creators } from '@/pages/Creators'
+import { KnowledgeBase } from '@/pages/KnowledgeBase'
 import { Members } from '@/pages/Members'
 
 function ProtectedRoute() {
@@ -23,6 +24,7 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="call-logs" element={<CallLogs />} />
           <Route path="members" element={<Members />} />
+          <Route path="knowledge-base" element={<KnowledgeBase />} />
           <Route path="creators" element={<Creators />} />
         </Route>
       </Route>

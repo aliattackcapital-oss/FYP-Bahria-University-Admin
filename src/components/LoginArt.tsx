@@ -1,32 +1,63 @@
+import { useEffect, useState } from 'react'
 import { Clock3, Phone, Radio } from 'lucide-react'
 import { MiniChart } from '@/components/MiniChart'
-import { dashboardStats } from '@/lib/mockData'
+import type { DashboardStats } from '@/types'
 
-const services = [
-  {
-    label: 'CALLS',
-    name: 'ai-receptionist',
-    icon: Phone,
-    value: dashboardStats.totalCalls.toLocaleString(),
-    data: dashboardStats.callsTrend,
-  },
-  {
-    label: 'AVG MINUTES',
-    name: 'conversation-length',
-    icon: Clock3,
-    value: dashboardStats.averageMinutesPerCall.toFixed(1),
-    data: dashboardStats.avgMinutesTrend,
-  },
-  {
-    label: 'MINUTES USED',
-    name: 'weekly-volume',
-    icon: Radio,
-    value: dashboardStats.totalMinutesConsumed.toLocaleString(),
-    data: dashboardStats.totalMinutesTrend,
-  },
-]
+const emptyStats: DashboardStats = {
+  totalCalls: 0,
+  averageMinutesPerCall: 0,
+  totalMinutesConsumed: 0,
+  callsTrend: [0, 0, 0, 0, 0, 0, 0],
+  avgMinutesTrend: [0, 0, 0, 0, 0, 0, 0],
+  totalMinutesTrend: [0, 0, 0, 0, 0, 0, 0],
+  labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+}
 
 export function LoginArt() {
+  const [stats, setStats] = useState<DashboardStats>(emptyStats)
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      try {
+        const response = await fetch('/api/dashboard-stats')
+        const data = (await response.json()) as { stats?: DashboardStats }
+        if (!response.ok || cancelled || !data.stats) return
+        setStats(data.stats)
+      } catch {
+        // keep zeros
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const services = [
+    {
+      label: 'CALLS',
+      name: 'ai-receptionist',
+      icon: Phone,
+      value: stats.totalCalls.toLocaleString(),
+      data: stats.callsTrend,
+    },
+    {
+      label: 'AVG MINUTES',
+      name: 'conversation-length',
+      icon: Clock3,
+      value: stats.averageMinutesPerCall.toFixed(1),
+      data: stats.avgMinutesTrend,
+    },
+    {
+      label: 'MINUTES USED',
+      name: 'weekly-volume',
+      icon: Radio,
+      value: stats.totalMinutesConsumed.toLocaleString(),
+      data: stats.totalMinutesTrend,
+    },
+  ]
+
   return (
     <aside className="relative hidden min-h-svh overflow-hidden bg-background lg:block">
       <div
@@ -86,7 +117,7 @@ export function LoginArt() {
                   </p>
                 </div>
                 <div className="text-primary">
-                  <MiniChart data={service.data} labels={dashboardStats.labels} />
+                  <MiniChart data={service.data} labels={stats.labels} />
                 </div>
               </div>
             ))}

@@ -7,6 +7,12 @@ import {
   syncCallFromRemote,
   waitAndSyncCall,
 } from './callSync.js'
+import {
+  addKnowledgeSources,
+  fetchKnowledgeBase,
+  parseKnowledgeFiles,
+} from './knowledgeBase.js'
+import { previewSitemapUrls } from './sitemap.js'
 
 function apiKey() {
   return process.env.RETELL_API_KEY?.replace(/^Bearer\s+/i, '').trim()
@@ -171,6 +177,10 @@ export async function handleWebhook(req, res) {
     return res.status(400).json({ error: 'Expected { event, call }' })
   }
 
+  if (!/^call_[a-zA-Z0-9]+$/.test(String(call.call_id))) {
+    return res.status(400).json({ error: 'Expected a Retell call id' })
+  }
+
   console.log('Webhook received:', event, call.call_id)
 
   if (!isSupabaseConfigured()) {
@@ -189,4 +199,74 @@ export async function handleWebhook(req, res) {
     console.error('webhook persist failed:', error)
     return res.status(500).json({ error: 'Failed to store call' })
   }
+}
+
+export async function handleGetKnowledgeBase(_req, res) {
+  try {
+    const kb = await fetchKnowledgeBase()
+    return res.json({
+      configured: true,
+      name: kb.knowledge_base_name,
+      status: kb.status,
+      sources: kb.knowledge_base_sources ?? [],
+    })
+  } catch (error) {
+    console.error('get knowledge base failed:', error)
+    return res.status(500).json({
+      configured: false,
+      error: error.message || 'Failed to load knowledge base',
+    })
+  }
+}
+
+export function handleAddKnowledgeSources(req, res) {
+  parseKnowledgeFiles(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message || 'Invalid upload' })
+    }
+    try {
+      const urls = parseUrlField(req.body?.url ?? req.body?.urls)
+      const kb = await addKnowledgeSources({ files: req.files, urls })
+      return res.status(201).json({
+        configured: true,
+        name: kb.knowledge_base_name,
+        status: kb.status,
+        sources: kb.knowledge_base_sources ?? [],
+      })
+    } catch (error) {
+      console.error('add knowledge sources failed:', error)
+      const status = Number(error.status) >= 400 && Number(error.status) < 500 ? error.status : 500
+      return res.status(status).json({
+        error: error.message || 'Failed to add knowledge',
+      })
+    }
+  })
+}
+
+export async function handlePreviewSitemap(req, res) {
+  const url = req.body?.url || req.query?.url
+  if (!url) {
+    return res.status(400).json({ error: 'Enter a website URL.' })
+  }
+  try {
+    const result = await previewSitemapUrls(url)
+    return res.json(result)
+  } catch (error) {
+    console.error('preview sitemap failed:', error)
+    return res.status(400).json({
+      error: error.message || 'Could not scan sitemap',
+    })
+  }
+}
+
+function parseUrlField(raw) {
+  if (!raw) return []
+  if (Array.isArray(raw)) return raw.map(String)
+  try {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) return parsed.map(String)
+  } catch {
+    // single URL string
+  }
+  return [String(raw)]
 }

@@ -1,30 +1,35 @@
 import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
 
 interface InviteMemberSheetProps {
   open: boolean
   onClose: () => void
+  onInvite: (member: { name: string; email: string }) => string | void
 }
 
-export function InviteMemberSheet({ open, onClose }: InviteMemberSheetProps) {
+export function InviteMemberSheet({
+  open,
+  onClose,
+  onInvite,
+}: InviteMemberSheetProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [sent, setSent] = useState(false)
+  const [error, setError] = useState('')
 
   const reset = () => {
     setName('')
     setEmail('')
-    setSent(false)
+    setError('')
   }
 
   const handleOpenChange = (next: boolean) => {
@@ -36,72 +41,70 @@ export function InviteMemberSheet({ open, onClose }: InviteMemberSheetProps) {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    setSent(true)
+    const problem = onInvite({ name: name.trim(), email: email.trim() })
+    if (problem) {
+      setError(problem)
+      return
+    }
+    handleOpenChange(false)
   }
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="flex w-full flex-col gap-0 sm:max-w-md">
-        <SheetHeader className="text-start">
-          <SheetTitle>Add a member</SheetTitle>
-          <SheetDescription>
-            Send an invitation with the person’s name and email. They will
-            receive a link to join the organization.
-          </SheetDescription>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add a member</DialogTitle>
+          <DialogDescription>
+            Invite this person to the organization. They will appear as invited
+            in the members list.
+          </DialogDescription>
+        </DialogHeader>
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-1 flex-col"
-        >
-          <div className="flex flex-1 flex-col gap-4 px-4">
-            <div className="space-y-2">
-              <Label htmlFor="invite-name">Full name</Label>
-              <Input
-                id="invite-name"
-                name="name"
-                autoComplete="name"
-                placeholder="Ayesha Khan"
-                value={name}
-                onChange={(e) => {
-                  setSent(false)
-                  setName(e.target.value)
-                }}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="invite-email">Email</Label>
-              <Input
-                id="invite-email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="name@bahria.edu.pk"
-                value={email}
-                onChange={(e) => {
-                  setSent(false)
-                  setEmail(e.target.value)
-                }}
-                required
-              />
-            </div>
-            {sent && (
-              <p className="text-sm text-muted-foreground">
-                Invitation preview ready for {name} ({email}). Sending will be
-                wired up later.
-              </p>
-            )}
+        <form onSubmit={handleSubmit} className="grid gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="invite-name">Full name</Label>
+            <Input
+              id="invite-name"
+              name="name"
+              autoComplete="name"
+              placeholder="Ayesha Khan"
+              value={name}
+              onChange={(e) => {
+                setError('')
+                setName(e.target.value)
+              }}
+              required
+            />
           </div>
-
-          <SheetFooter>
-            <Button type="submit">Send invitation</Button>
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+          <div className="space-y-2">
+            <Label htmlFor="invite-email">Email</Label>
+            <Input
+              id="invite-email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="name@bahria.edu.pk"
+              value={email}
+              onChange={(e) => {
+                setError('')
+                setEmail(e.target.value)
+              }}
+              required
+            />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+            >
               Cancel
             </Button>
-          </SheetFooter>
+            <Button type="submit">Send invitation</Button>
+          </DialogFooter>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }

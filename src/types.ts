@@ -53,3 +53,19 @@ export interface DashboardStats {
   totalMinutesTrend: number[]
   labels: string[]
 }
+
+export type KnowledgeBaseStatus =
+  | 'in_progress'
+  | 'complete'
+  | 'error'
+  | 'refreshing_in_progress'
+
+export interface KnowledgeBaseSource {
+  type: 'document' | 'text' | 'url'
+  source_id: string
+  filename?: string
+  file_url?: string
+  file_size?: number
+  title?: string
+  url?: string
+}

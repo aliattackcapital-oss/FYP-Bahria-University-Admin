@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
+  BookOpen,
   Building2,
   LayoutDashboard,
   LogOut,
@@ -14,10 +15,14 @@ import { VocaLogo } from '@/components/VocaLogo'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 
-const navItems = [
+const generalItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/call-logs', label: 'Call Logs', icon: PhoneCall, end: false },
   { to: '/members', label: 'Members', icon: Users, end: false },
+]
+
+const agentSettingsItems = [
+  { to: '/knowledge-base', label: 'Agent Knowledgebase', icon: BookOpen, end: false },
 ]
 
 const creatorsItem = {
@@ -45,15 +50,15 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-svh w-full bg-background">
-      <aside className="hidden w-64 shrink-0 flex-col border-e bg-sidebar text-sidebar-foreground md:flex">
+    <div className="flex h-svh w-full overflow-hidden bg-background">
+      <aside className="hidden h-full w-64 shrink-0 flex-col border-e bg-sidebar text-sidebar-foreground md:flex">
         <div className="flex h-16 items-center px-4">
           <VocaLogo className="text-xl" />
         </div>
 
         <Separator />
 
-        <nav className="flex flex-1 flex-col gap-1 p-3">
+        <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3">
           <p className="mb-1 px-2 text-xs font-medium text-muted-foreground">
             Organization
           </p>
@@ -65,7 +70,22 @@ export function AppLayout() {
           <p className="mb-1 mt-4 px-2 text-xs font-medium text-muted-foreground">
             General
           </p>
-          {navItems.map((item) => (
+          {generalItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) => navClassName(isActive)}
+            >
+              <item.icon className="size-4" />
+              {item.label}
+            </NavLink>
+          ))}
+
+          <p className="mb-1 mt-4 px-2 text-xs font-medium text-muted-foreground">
+            Agent Settings
+          </p>
+          {agentSettingsItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -78,7 +98,7 @@ export function AppLayout() {
           ))}
         </nav>
 
-        <div className="flex flex-col gap-1 p-3">
+        <div className="mt-auto flex shrink-0 flex-col gap-1 p-3">
           <NavLink
             to={creatorsItem.to}
             end={creatorsItem.end}
@@ -99,14 +119,14 @@ export function AppLayout() {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur md:px-6">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="z-40 flex h-16 shrink-0 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur md:px-6">
           <div className="md:hidden">
             <VocaLogo className="text-lg" />
           </div>
 
           <nav className="flex items-center gap-1 md:hidden">
-            {[...navItems, creatorsItem].map((item) => (
+            {[...generalItems, ...agentSettingsItems, creatorsItem].map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -133,7 +153,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-6 md:px-6">
+        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-6 md:px-6">
           <div className="mx-auto w-full max-w-7xl">
             <Outlet />
           </div>

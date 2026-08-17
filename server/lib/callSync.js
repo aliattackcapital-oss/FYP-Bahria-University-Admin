@@ -356,14 +356,22 @@ function emptyDashboardStats(labels) {
   }
 }
 
-function lastSevenUtcDays() {
+const STATS_TZ = 'Asia/Karachi'
+
+function ymdInTimeZone(date, timeZone = STATS_TZ) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
+}
+
+function lastSevenDays() {
   const days = []
   const now = new Date()
   for (let i = 6; i >= 0; i -= 1) {
-    const date = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i),
-    )
-    days.push(date.toISOString().slice(0, 10))
+    days.push(ymdInTimeZone(new Date(now.getTime() - i * 86_400_000)))
   }
   return days
 }
@@ -381,7 +389,7 @@ function isCompletedCall(row) {
 }
 
 export async function getDashboardStats() {
-  const labels = lastSevenUtcDays().map(weekdayLabel)
+  const labels = lastSevenDays().map(weekdayLabel)
   if (!getSupabaseAdmin()) return emptyDashboardStats(labels)
 
   const supabase = getSupabaseAdmin()
@@ -396,12 +404,12 @@ export async function getDashboardStats() {
   const totalMinutes = totalSeconds / 60
   const totalCalls = rows.length
 
-  const days = lastSevenUtcDays()
+  const days = lastSevenDays()
   const byDay = Object.fromEntries(
     days.map((day) => [day, { count: 0, seconds: 0 }]),
   )
   for (const row of rows) {
-    const day = row.started_at ? new Date(row.started_at).toISOString().slice(0, 10) : ''
+    const day = row.started_at ? ymdInTimeZone(new Date(row.started_at)) : ''
     if (!byDay[day]) continue
     byDay[day].count += 1
     byDay[day].seconds += row.duration_seconds ?? 0
@@ -431,7 +439,7 @@ export async function listCallLogs() {
     .order('started_at', { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data ?? []).map(toClientCallLog)
+  return (data ?? []).filter(isCompletedCall).map(toClientCallLog)
 }
 
 export async function fetchRemoteCall(callId, apiKey) {
