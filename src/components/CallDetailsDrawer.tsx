@@ -1,9 +1,9 @@
 import type { CallLog } from '@/types'
 import { AudioPlayer } from '@/components/AudioPlayer'
-import { CallEvaluationPanel } from '@/components/CallEvaluationPanel'
+import { CallEvaluationForm } from '@/components/CallEvaluationForm'
 import { TranscriptView } from '@/components/TranscriptView'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import {
   Sheet,
   SheetContent,
@@ -36,9 +36,12 @@ function formatDateTime(iso: string) {
 }
 
 export function CallDetailsDrawer({ call, open, onClose }: CallDetailsDrawerProps) {
+  const { orgRole } = useAuth()
+  const showEvaluation = orgRole === 'front_desk' && call != null
+
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
-      <SheetContent className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
+      <SheetContent className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-xl">
         <SheetHeader className="text-start">
           <SheetTitle>{call?.name ?? 'Call details'}</SheetTitle>
           <SheetDescription>
@@ -71,14 +74,16 @@ export function CallDetailsDrawer({ call, open, onClose }: CallDetailsDrawerProp
               <AudioPlayer src={call.audioUrl} />
             </section>
 
-            <CallEvaluationPanel callId={call.id} />
-
-            <Separator />
-
             <section className="space-y-2">
               <h3 className="text-sm font-semibold">Transcript</h3>
               <TranscriptView lines={call.transcript} />
             </section>
+
+            {showEvaluation ? (
+              <section className="space-y-2">
+                <CallEvaluationForm callId={call.id} showHeading />
+              </section>
+            ) : null}
 
             <Button variant="outline" onClick={onClose}>
               Close

@@ -1,12 +1,14 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   BookOpen,
+  FileText,
   Building2,
   LayoutDashboard,
   LogOut,
   ClipboardList,
+  Flag,
   PhoneCall,
-  Sparkles,
+  ScrollText,
   Users,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -25,14 +27,8 @@ const generalItems = [
 
 const agentSettingsItems = [
   { to: '/knowledge-base', label: 'Agent Knowledgebase', icon: BookOpen, end: false },
+  { to: '/agent-prompt', label: 'Agent prompt', icon: FileText, end: false },
 ]
-
-const creatorsItem = {
-  to: '/creators',
-  label: 'Creators',
-  icon: Sparkles,
-  end: false,
-}
 
 function navClassName(isActive: boolean) {
   return cn(
@@ -46,10 +42,23 @@ function navClassName(isActive: boolean) {
 export function AppLayout() {
   const navigate = useNavigate()
   const { member, organizationName, orgRole, signOut } = useAuth()
-  const canViewMembers = orgRole === 'super_admin' || orgRole === 'admin'
-  const navGeneral = canViewMembers
-    ? generalItems
-    : generalItems.filter((item) => item.to !== '/members')
+  const canViewMembers =
+    orgRole === 'super_admin' || orgRole === 'admin' || orgRole === 'front_desk'
+  const isFrontDesk = orgRole === 'front_desk'
+  const isSuperAdmin = orgRole === 'super_admin'
+  const navGeneral = generalItems.filter((item) => {
+    if (item.to === '/members' && !canViewMembers) return false
+    if (item.to === '/review-queue' && !isFrontDesk) return false
+    return true
+  })
+  const navAdminOnly = isSuperAdmin
+    ? [
+        { to: '/activity', label: 'Activity', icon: ScrollText, end: false as const },
+        { to: '/flagged-calls', label: 'Flagged calls', icon: Flag, end: false as const },
+      ]
+    : []
+  const canAccessKnowledgeBase = orgRole === 'super_admin' || orgRole === 'admin'
+  const navAgentSettings = canAccessKnowledgeBase ? agentSettingsItems : []
 
   const handleLogout = () => {
     void signOut().then(() => navigate('/login', { replace: true }))
@@ -93,31 +102,46 @@ export function AppLayout() {
             </NavLink>
           ))}
 
-          <p className="mb-1 mt-4 px-2 text-xs font-medium text-muted-foreground">
-            Agent Settings
-          </p>
-          {agentSettingsItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) => navClassName(isActive)}
-            >
-              <item.icon className="size-4" />
-              {item.label}
-            </NavLink>
-          ))}
+          {navAdminOnly.length > 0 ? (
+            <>
+              <p className="mb-1 mt-4 px-2 text-xs font-medium text-muted-foreground">
+                Super admin
+              </p>
+              {navAdminOnly.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) => navClassName(isActive)}
+                >
+                  <item.icon className="size-4" />
+                  {item.label}
+                </NavLink>
+              ))}
+            </>
+          ) : null}
+
+          {navAgentSettings.length > 0 ? (
+            <>
+              <p className="mb-1 mt-4 px-2 text-xs font-medium text-muted-foreground">
+                Agent Settings
+              </p>
+              {navAgentSettings.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) => navClassName(isActive)}
+                >
+                  <item.icon className="size-4" />
+                  {item.label}
+                </NavLink>
+              ))}
+            </>
+          ) : null}
         </nav>
 
         <div className="mt-auto flex shrink-0 flex-col gap-1 p-3">
-          <NavLink
-            to={creatorsItem.to}
-            end={creatorsItem.end}
-            className={({ isActive }) => navClassName(isActive)}
-          >
-            <creatorsItem.icon className="size-4 shrink-0" />
-            {creatorsItem.label}
-          </NavLink>
           <ThemeSwitch />
           <button
             type="button"
@@ -137,7 +161,7 @@ export function AppLayout() {
           </div>
 
           <nav className="flex items-center gap-1 md:hidden">
-            {[...navGeneral, ...agentSettingsItems, creatorsItem].map((item) => (
+            {[...navGeneral, ...navAdminOnly, ...navAgentSettings].map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

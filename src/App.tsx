@@ -4,12 +4,16 @@ import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { AppLayout } from '@/components/AppLayout'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { CallLogs } from '@/pages/CallLogs'
+import { ReviewCall } from '@/pages/ReviewCall'
 import { ReviewQueue } from '@/pages/ReviewQueue'
 import { Dashboard } from '@/pages/Dashboard'
+import { ActivityLogs } from '@/pages/ActivityLogs'
 import { AcceptInvite } from '@/pages/AcceptInvite'
 import { Login } from '@/pages/Login'
-import { Creators } from '@/pages/Creators'
+import { AgentPrompt } from '@/pages/AgentPrompt'
 import { KnowledgeBase } from '@/pages/KnowledgeBase'
+import { FlaggedCallReview } from '@/pages/FlaggedCallReview'
+import { FlaggedCalls } from '@/pages/FlaggedCalls'
 import { Members } from '@/pages/Members'
 
 /** Supabase may send invite tokens to Site URL (/) instead of /accept-invite. */
@@ -28,6 +32,22 @@ function InviteAuthRedirect() {
     window.location.replace(`/accept-invite${tail}`)
   }, [location.pathname, location.search, location.hash])
   return null
+}
+
+function KnowledgeBaseRoute() {
+  const { orgRole } = useAuth()
+  if (orgRole === 'front_desk') {
+    return <Navigate to="/" replace />
+  }
+  return <KnowledgeBase />
+}
+
+function AgentPromptRoute() {
+  const { orgRole } = useAuth()
+  if (orgRole === 'front_desk') {
+    return <Navigate to="/" replace />
+  }
+  return <AgentPrompt />
 }
 
 function ProtectedRoute() {
@@ -60,9 +80,13 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="call-logs" element={<CallLogs />} />
             <Route path="review-queue" element={<ReviewQueue />} />
+            <Route path="review-queue/:callId" element={<ReviewCall />} />
+            <Route path="activity" element={<ActivityLogs />} />
+            <Route path="flagged-calls" element={<FlaggedCalls />} />
+            <Route path="flagged-calls/:flagId" element={<FlaggedCallReview />} />
             <Route path="members" element={<Members />} />
-            <Route path="knowledge-base" element={<KnowledgeBase />} />
-            <Route path="creators" element={<Creators />} />
+            <Route path="knowledge-base" element={<KnowledgeBaseRoute />} />
+            <Route path="agent-prompt" element={<AgentPromptRoute />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

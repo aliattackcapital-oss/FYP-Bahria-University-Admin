@@ -7,11 +7,17 @@ import {
   handleBootstrapOrganization,
   handleCreateWebCall,
   handleDashboardStats,
+  handleGetCallLogDetail,
+  handleFrontDeskActivityStats,
+  handleGetAgentPrompt,
   handleGetCallEvaluation,
+  handleGetFlaggedCall,
   handleGetKnowledgeBase,
   handleGetOrganization,
   handleInviteOrganizationMember,
+  handleListActivityLogs,
   handleListCallEvaluations,
+  handleListFlaggedCalls,
   handleListCallLogs,
   handleListOrganizationInvitations,
   handleListOrganizationMembers,
@@ -27,6 +33,8 @@ import {
   handleStartReviewTask,
   handleSyncCall,
   handleUpdateOrganizationMember,
+  handlePublishAgentPrompt,
+  handleUpdateFlaggedCall,
   handleUpsertCallEvaluation,
   handleWebhook,
 } from './handlers.js'
@@ -85,6 +93,7 @@ export async function dispatchApiRequest(req, res) {
 
   if (path === '/api/create-web-call' && method === 'POST') return handleCreateWebCall(req, res)
   if (path === '/api/call-logs' && method === 'GET') return handleListCallLogs(req, res)
+  if (path === '/api/call-logs/detail' && method === 'GET') return handleGetCallLogDetail(req, res)
   if (path === '/api/dashboard-stats' && method === 'GET') return handleDashboardStats(req, res)
   if (path === '/api/management-stats' && method === 'GET') return handleManagementStats(req, res)
 
@@ -98,6 +107,21 @@ export async function dispatchApiRequest(req, res) {
   }
   if (path === '/api/call-evaluations/list' && method === 'GET') {
     return handleListCallEvaluations(req, res)
+  }
+
+  if (path === '/api/activity-logs/stats' && method === 'GET') {
+    return handleFrontDeskActivityStats(req, res)
+  }
+  if (path === '/api/activity-logs' && method === 'GET') {
+    return handleListActivityLogs(req, res)
+  }
+
+  if (path === '/api/flagged-calls') {
+    if (method === 'GET') return handleListFlaggedCalls(req, res)
+    if (method === 'PATCH') return handleUpdateFlaggedCall(req, res)
+  }
+  if (path === '/api/flagged-calls/detail' && method === 'GET') {
+    return handleGetFlaggedCall(req, res)
   }
 
   if (path === '/api/review-queue' && method === 'GET') {
@@ -114,6 +138,11 @@ export async function dispatchApiRequest(req, res) {
   }
   if (path === '/api/review-queue/backfill' && method === 'POST') {
     return handleBackfillReviewQueue(req, res)
+  }
+
+  if (path === '/api/agent-prompt') {
+    if (method === 'GET') return handleGetAgentPrompt(req, res)
+    if (method === 'POST') return handlePublishAgentPrompt(req, res)
   }
 
   if (path === '/api/knowledge-base') {

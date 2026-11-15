@@ -23,7 +23,9 @@ export function Members() {
     secret: string
   } | null>(null)
 
-  const canView = orgRole === 'super_admin' || orgRole === 'admin'
+  const canView =
+    orgRole === 'super_admin' || orgRole === 'admin' || orgRole === 'front_desk'
+  const readOnly = orgRole === 'front_desk'
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -132,6 +134,9 @@ export function Members() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Members</h1>
           {orgName ? <p className="text-sm text-muted-foreground">{orgName}</p> : null}
+          {readOnly ? (
+            <p className="text-sm text-muted-foreground">Read-only directory for your organization.</p>
+          ) : null}
         </div>
         {isSuperAdmin ? (
           <Button onClick={() => setInviteOpen(true)} disabled={loading}>
@@ -147,7 +152,7 @@ export function Members() {
         </Alert>
       ) : null}
 
-      {!isSuperAdmin ? (
+      {!isSuperAdmin && !readOnly ? (
         <p className="text-sm text-muted-foreground">
           Only super admins can invite, revoke, or issue recovery links.
         </p>
@@ -158,7 +163,7 @@ export function Members() {
       ) : (
         <MembersTable
           members={members}
-          canManage={isSuperAdmin}
+          canManage={isSuperAdmin && !readOnly}
           onSuspend={(id) => void handleUpdateMember(id, { status: 'suspended' })}
           onReactivate={(id) => void handleUpdateMember(id, { status: 'active' })}
           onRecoveryLink={isSuperAdmin ? (id) => void handleRecoveryLink(id) : undefined}

@@ -90,6 +90,10 @@ export async function listReviewTasks(organizationId, { filter = 'unassigned', m
     query = query.eq('status', 'unassigned')
   } else if (filter === 'mine' && memberId) {
     query = query.eq('assigned_member_id', memberId).in('status', ['assigned', 'in_review'])
+  } else if (filter === 'mine_open' && memberId) {
+    query = query.eq('assigned_member_id', memberId).in('status', ['assigned', 'in_review'])
+  } else if (filter === 'mine_finished' && memberId) {
+    query = query.eq('assigned_member_id', memberId).eq('status', 'completed')
   } else if (filter === 'open') {
     query = query.in('status', ['unassigned', 'assigned', 'in_review', 'processing'])
   }
@@ -215,6 +219,35 @@ export async function reassignReviewTask({ organizationId, callId, memberId }) {
     .maybeSingle()
   if (error) throw error
   return data
+}
+
+export async function getReviewTaskForCall(organizationId, callId) {
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase
+    .from('call_review_tasks')
+    .select('id, call_id, status, assigned_member_id')
+    .eq('organization_id', organizationId)
+    .eq('call_id', callId)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+export async function assertMemberCanEvaluate({ organizationId, callId, memberId }) {
+  const task = await getReviewTaskForCall(organizationId, callId)
+  if (!task) {
+    return { ok: false, error: 'No review task for this call.' }
+  }
+  if (task.status === 'completed') {
+    return { ok: true, task, allowResubmit: true }
+  }
+  if (task.assigned_member_id !== memberId) {
+    return { ok: false, error: 'This call is assigned to another reviewer.' }
+  }
+  if (!['assigned', 'in_review', 'completed'].includes(task.status)) {
+    return { ok: false, error: 'Claim this call from the queue before evaluating.' }
+  }
+  return { ok: true, task }
 }
 
 export async function backfillReviewTasks(organizationId) {

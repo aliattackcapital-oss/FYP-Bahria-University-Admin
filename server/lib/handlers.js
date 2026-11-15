@@ -1,5 +1,6 @@
 import { isSupabaseConfigured } from './supabase.js'
 import {
+  getCallLogById,
   getDashboardStats,
   listCallLogs,
   mapCallToLog,
@@ -16,6 +17,12 @@ import { activateInvitedMember, requireActiveMember } from './auth.js'
 import { createInviteLink, createRecoveryLink } from './authInvite.js'
 import { deliverInvite } from './notificationDelivery.js'
 import {
+  adminFlagsSchemaReady,
+  getFlaggedCallDetail,
+  listFlaggedCalls,
+  updateAdminFlagReview,
+} from './evaluationFlags.js'
+import {
   evaluationsSchemaReady,
   getEvaluationForCall,
   listEvaluations,
@@ -29,6 +36,7 @@ import {
 import { getManagementStats } from './managementStats.js'
 import { forbidUnlessRole, PERMS } from './rbac.js'
 import {
+  assertMemberCanEvaluate,
   backfillReviewTasks,
   claimReviewTask,
   listReviewTasks,
@@ -36,6 +44,9 @@ import {
   reassignReviewTask,
   reviewQueueSchemaReady,
 } from './reviewQueue.js'
+import { agentPromptConfigured, getAgentPromptDetails, publishAgentGeneralPrompt } from './agentPrompt.js'
+import { activityLogsSchemaReady, listActivityLogs } from './activityLogs.js'
+import { getFrontDeskActivityStats } from './frontDeskActivityStats.js'
 import {
   bootstrapSuperAdmin,
   getOrganizationBySlug,
@@ -236,7 +247,51 @@ export async function handleWebhook(req, res) {
   }
 }
 
-export async function handleGetKnowledgeBase(_req, res) {
+export async function handleGetAgentPrompt(req, res) {
+  if (!forbidUnlessRole(req, res, PERMS.AGENT_PROMPT)) return
+  if (!agentPromptConfigured()) {
+    return res.json({ configured: false, prompt: null })
+  }
+  try {
+    const details = await getAgentPromptDetails()
+    return res.json({ configured: true, ...details })
+  } catch (error) {
+    console.error('get agent prompt failed:', error)
+    return res.status(500).json({
+      configured: false,
+      error: error.message || 'Failed to load agent prompt',
+    })
+  }
+}
+
+export async function handlePublishAgentPrompt(req, res) {
+  if (!forbidUnlessRole(req, res, PERMS.AGENT_PROMPT)) return
+  const generalPrompt = req.body?.generalPrompt
+  const beginMessage = req.body?.beginMessage
+  if (!agentPromptConfigured()) {
+    return res.status(503).json({ error: 'Voice agent is not configured.' })
+  }
+  try {
+    const details = await publishAgentGeneralPrompt(generalPrompt, beginMessage)
+    const organization = req.auth.organization
+    await logActivity({
+      organizationId: organization.id,
+      actorMemberId: req.auth.member.id,
+      action: 'agent.prompt_published',
+      entityType: 'retell_agent',
+      entityId: details.agentId,
+      metadata: { llmVersion: details.llmVersion, agentVersion: details.agentVersion },
+    })
+    return res.json({ configured: true, ...details })
+  } catch (error) {
+    const status = Number(error.status) >= 400 && Number(error.status) < 500 ? error.status : 500
+    console.error('publish agent prompt failed:', error)
+    return res.status(status).json({ error: error.message || 'Failed to publish prompt' })
+  }
+}
+
+export async function handleGetKnowledgeBase(req, res) {
+  if (!forbidUnlessRole(req, res, PERMS.KB_READ)) return
   try {
     const kb = await fetchKnowledgeBase()
     return res.json({
@@ -633,8 +688,34 @@ export async function handleManagementStats(req, res) {
   }
 }
 
+export async function handleGetCallLogDetail(req, res) {
+  const callId = String(req.query?.callId ?? '').trim()
+  if (!callId) return res.status(400).json({ error: 'callId is required' })
+  const forReview = req.query?.forReview === '1'
+  if (forReview) {
+    if (!forbidUnlessRole(req, res, PERMS.CALL_DETAIL_REVIEW)) return
+  } else if (!forbidUnlessRole(req, res, PERMS.CALL_DETAIL)) return
+  try {
+    const log = await getCallLogById(callId)
+    if (!log) return res.status(404).json({ error: 'Call not found.' })
+    if (forReview) {
+      const organization = req.auth.organization
+      const gate = await assertMemberCanEvaluate({
+        organizationId: organization.id,
+        callId,
+        memberId: req.auth.member.id,
+      })
+      if (!gate.ok) return res.status(403).json({ error: gate.error })
+    }
+    return res.json({ log })
+  } catch (error) {
+    console.error('get call detail failed:', error)
+    return res.status(500).json({ error: error.message || 'Failed to load call' })
+  }
+}
+
 export async function handleGetCallEvaluation(req, res) {
-  if (!forbidUnlessRole(req, res, PERMS.EVALUATIONS)) return
+  if (!forbidUnlessRole(req, res, PERMS.EVALUATION_GET)) return
   const callId = String(req.query?.callId ?? '').trim()
   if (!callId) return res.status(400).json({ error: 'callId is required' })
   if (!isSupabaseConfigured()) {
@@ -646,7 +727,7 @@ export async function handleGetCallEvaluation(req, res) {
       return res.json({
         configured: false,
         schemaReady: false,
-        hint: 'Apply supabase/migrations/20261115190000_phase2_5_extensions.sql',
+        hint: 'Apply supabase/migrations/20261115210000_evaluation_likert_flags.sql',
       })
     }
     const organization = req.auth.organization
@@ -659,27 +740,30 @@ export async function handleGetCallEvaluation(req, res) {
 }
 
 export async function handleUpsertCallEvaluation(req, res) {
-  if (!forbidUnlessRole(req, res, PERMS.EVALUATIONS)) return
+  if (!forbidUnlessRole(req, res, PERMS.EVALUATIONS_WRITE)) return
   const callId = String(req.body?.callId ?? '').trim()
-  const verdict = String(req.body?.verdict ?? '').trim()
-  const notes = req.body?.notes
   if (!callId) return res.status(400).json({ error: 'callId is required' })
-  if (!verdict) return res.status(400).json({ error: 'verdict is required' })
   try {
     const ready = await evaluationsSchemaReady()
     if (!ready) {
       return res.status(503).json({
         error: 'Evaluation schema is not applied.',
-        hint: 'Apply supabase/migrations/20261115190000_phase2_5_extensions.sql',
+        hint: 'Apply supabase/migrations/20261115210000_evaluation_likert_flags.sql',
       })
     }
     const organization = req.auth.organization
+    const gate = await assertMemberCanEvaluate({
+      organizationId: organization.id,
+      callId,
+      memberId: req.auth.member.id,
+    })
+    if (!gate.ok) return res.status(403).json({ error: gate.error })
+
     const row = await upsertEvaluation({
       organizationId: organization.id,
       callId,
       reviewerMemberId: req.auth.member.id,
-      verdict,
-      notes,
+      payload: req.body,
     })
     await logActivity({
       organizationId: organization.id,
@@ -687,7 +771,10 @@ export async function handleUpsertCallEvaluation(req, res) {
       action: 'call.evaluated',
       entityType: 'call_log',
       entityId: callId,
-      metadata: { verdict },
+      metadata: {
+        averageRating: row.average_rating,
+        flagForAdmin: row.flag_for_admin,
+      },
     })
     try {
       const { completeReviewTask } = await import('./reviewQueue.js')
@@ -697,13 +784,128 @@ export async function handleUpsertCallEvaluation(req, res) {
     }
     return res.json({ evaluation: row })
   } catch (error) {
+    const message = error?.message || 'Failed to save evaluation'
+    const status = message.includes('required') || message.includes('must be') ? 400 : 500
     console.error('upsert call evaluation failed:', error)
-    return res.status(500).json({ error: error.message || 'Failed to save evaluation' })
+    return res.status(status).json({ error: message })
+  }
+}
+
+export async function handleListFlaggedCalls(req, res) {
+  if (!forbidUnlessRole(req, res, PERMS.FLAGGED_CALLS)) return
+  try {
+    const flagsReady = await adminFlagsSchemaReady()
+    if (!flagsReady) {
+      return res.json({
+        configured: false,
+        hint: 'Apply supabase/migrations/20261115210000_evaluation_likert_flags.sql',
+        flags: [],
+      })
+    }
+    const organization = req.auth.organization
+    const flags = await listFlaggedCalls(organization.id)
+    return res.json({ configured: true, flags })
+  } catch (error) {
+    console.error('list flagged calls failed:', error)
+    return res.status(500).json({ error: error.message || 'Failed to load flagged calls' })
+  }
+}
+
+export async function handleGetFlaggedCall(req, res) {
+  if (!forbidUnlessRole(req, res, PERMS.FLAGGED_CALLS)) return
+  const flagId = String(req.query?.flagId ?? '').trim()
+  if (!flagId) return res.status(400).json({ error: 'flagId is required' })
+  try {
+    const organization = req.auth.organization
+    const detail = await getFlaggedCallDetail(organization.id, flagId)
+    if (!detail) return res.status(404).json({ error: 'Flag not found' })
+
+    const callId = detail.flag.call_id
+    let log = null
+    try {
+      log = await getCallLogById(callId)
+    } catch {
+      log = null
+    }
+
+    return res.json({
+      flag: detail.flag,
+      history: detail.history,
+      log: log ? mapCallToLog(log) : null,
+    })
+  } catch (error) {
+    console.error('get flagged call failed:', error)
+    return res.status(500).json({ error: error.message || 'Failed to load flag' })
+  }
+}
+
+export async function handleUpdateFlaggedCall(req, res) {
+  if (!forbidUnlessRole(req, res, PERMS.FLAGGED_CALLS)) return
+  const flagId = String(req.body?.flagId ?? '').trim()
+  const status = String(req.body?.status ?? '').trim()
+  const adminNotes = req.body?.adminNotes
+  const changesDocumented = req.body?.changesDocumented
+  if (!flagId) return res.status(400).json({ error: 'flagId is required' })
+  if (!status) return res.status(400).json({ error: 'status is required' })
+  try {
+    const organization = req.auth.organization
+    const row = await updateAdminFlagReview({
+      organizationId: organization.id,
+      flagId,
+      adminMemberId: req.auth.member.id,
+      status,
+      adminNotes,
+      changesDocumented,
+    })
+    await logActivity({
+      organizationId: organization.id,
+      actorMemberId: req.auth.member.id,
+      action: 'evaluation_flag.updated',
+      entityType: 'call_evaluation_admin_flag',
+      entityId: flagId,
+      metadata: { status },
+    })
+    return res.json({ flag: row })
+  } catch (error) {
+    const message = error?.message || 'Failed to update flag'
+    const code = message.includes('Invalid') || message.includes('not found') ? 400 : 500
+    console.error('update flagged call failed:', error)
+    return res.status(code).json({ error: message })
+  }
+}
+
+export async function handleFrontDeskActivityStats(req, res) {
+  if (!forbidUnlessRole(req, res, PERMS.ACTIVITY_LOGS)) return
+  try {
+    const organization = req.auth.organization
+    const stats = await getFrontDeskActivityStats(organization.id)
+    return res.json({ stats })
+  } catch (error) {
+    console.error('front desk activity stats failed:', error)
+    return res.status(500).json({ error: error.message || 'Failed to load stats' })
+  }
+}
+
+export async function handleListActivityLogs(req, res) {
+  if (!forbidUnlessRole(req, res, PERMS.ACTIVITY_LOGS)) return
+  const scope = String(req.query?.scope ?? 'front_desk').trim()
+  try {
+    const ready = await activityLogsSchemaReady()
+    if (!ready) {
+      return res.json({ configured: false, logs: [] })
+    }
+    const organization = req.auth.organization
+    const frontDeskOnly = scope === 'front_desk'
+    const logs = await listActivityLogs(organization.id, { frontDeskOnly })
+    return res.json({ configured: true, logs })
+  } catch (error) {
+    console.error('list activity logs failed:', error)
+    return res.status(500).json({ error: error.message || 'Failed to load activity' })
   }
 }
 
 export async function handleListCallEvaluations(req, res) {
-  if (!forbidUnlessRole(req, res, PERMS.EVALUATIONS)) return
+  if (!forbidUnlessRole(req, res, PERMS.EVALUATIONS_READ)) return
   try {
     const ready = await evaluationsSchemaReady()
     if (!ready) {
@@ -783,6 +985,13 @@ export async function handleStartReviewTask(req, res) {
       memberId: req.auth.member.id,
     })
     if (!task) return res.status(403).json({ error: 'You have not claimed this call.' })
+    await logActivity({
+      organizationId: organization.id,
+      actorMemberId: req.auth.member.id,
+      action: 'review.started',
+      entityType: 'call_log',
+      entityId: callId,
+    })
     return res.json({ task })
   } catch (error) {
     console.error('start review failed:', error)

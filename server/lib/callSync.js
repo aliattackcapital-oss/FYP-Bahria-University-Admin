@@ -437,6 +437,19 @@ export async function getDashboardStats() {
   }
 }
 
+export async function getCallLogById(callId) {
+  const supabase = getSupabaseAdmin()
+  if (!supabase) throw new Error('Supabase is not configured')
+  const { data, error } = await supabase
+    .from('call_logs')
+    .select('id, name, phone, email, enrollment, intent, duration_seconds, started_at, summary, audio_url, transcript, analyzed, call_status')
+    .eq('id', callId)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data) return null
+  return toClientCallLog(data)
+}
+
 export async function listCallLogs() {
   const supabase = getSupabaseAdmin()
   if (!supabase) throw new Error('Supabase is not configured')

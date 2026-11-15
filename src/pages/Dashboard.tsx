@@ -22,6 +22,10 @@ export function Dashboard() {
   const { orgRole } = useAuth()
   const [stats, setStats] = useState<DashboardStats>(emptyStats)
   const showManagement = orgRole === 'super_admin' || orgRole === 'admin'
+  const pageSubtitle =
+    orgRole === 'super_admin'
+      ? 'Organization call activity, team metrics, and voice agent access.'
+      : 'Overview of call activity this week.'
 
   useEffect(() => {
     let cancelled = false
@@ -60,9 +64,7 @@ export function Dashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Overview of call activity this week.
-        </p>
+        <p className="text-sm text-muted-foreground">{pageSubtitle}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

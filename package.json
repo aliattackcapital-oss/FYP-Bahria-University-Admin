@@ -8,10 +8,13 @@
     "dev:web": "vite",
     "dev:api": "node --watch server/index.js",
     "build": "tsc -b && vite build",
+    "test": "node scripts/evaluation-validate.test.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "org:bootstrap": "node scripts/bootstrap-organization.mjs",
-    "org:smoke": "node scripts/phase1-org-smoke.mjs"
+    "org:smoke": "node scripts/phase1-org-smoke.mjs",
+    "db:migrate:eval": "node scripts/apply-migration.mjs supabase/migrations/20261115210000_evaluation_likert_flags.sql",
+    "agent:smoke": "node scripts/agent-prompt-smoke.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.23",
@@ -46,6 +49,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "oxlint": "^1.75.0",
+    "pg": "^8.23.1",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.2.0"

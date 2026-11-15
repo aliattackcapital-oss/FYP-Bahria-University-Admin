@@ -11,7 +11,7 @@ export type ReviewTaskStatus =
   | 'in_review'
   | 'completed'
 
-export type ReviewQueueFilter = 'unassigned' | 'mine' | 'open'
+export type ReviewQueueFilter = 'unassigned' | 'mine_open' | 'mine_finished' | 'mine' | 'open'
 
 export interface ReviewQueueTask {
   id: string
@@ -89,11 +89,80 @@ export type EvaluationVerdict =
 export interface CallEvaluation {
   id: string
   call_id: string
-  verdict: EvaluationVerdict
-  notes: string | null
+  verdict?: EvaluationVerdict | null
+  notes?: string | null
+  rating_q1?: number | null
+  rating_q2?: number | null
+  rating_q3?: number | null
+  rating_q4?: number | null
+  rating_q5?: number | null
+  average_rating?: number | null
+  suggestions?: string | null
+  flag_for_admin?: boolean
+  flag_priority?: 'normal' | 'urgent' | null
+  flag_reason?: string | null
   reviewer_member_id: string | null
   created_at: string
   updated_at: string
+}
+
+export type AdminFlagStatus =
+  | 'flagged'
+  | 'under_review'
+  | 'changes_implemented'
+  | 'resolved'
+
+export interface ActivityLogActor {
+  id: string
+  name: string
+  email: string
+  role: string
+}
+
+export interface FrontDeskOfficerStat {
+  id: string
+  name: string
+  email: string
+  evaluations: number
+  claims: number
+}
+
+export interface FrontDeskActivityStats {
+  labels: string[]
+  activeOfficers: number
+  evaluationsThisWeek: number
+  claimsThisWeek: number
+  flagsRaisedThisWeek: number
+  openFlags: number
+  evaluationsTrend: number[]
+  claimsTrend: number[]
+  officerLeaderboard: FrontDeskOfficerStat[]
+  maxOfficerEval: number
+}
+
+export interface ActivityLogEntry {
+  id: string
+  action: string
+  entityType: string | null
+  entityId: string | null
+  metadata: Record<string, unknown>
+  createdAt: string
+  actor: ActivityLogActor | null
+}
+
+export interface FlaggedCallSummary {
+  id: string
+  callId: string
+  callName: string
+  callDate: string
+  status: AdminFlagStatus
+  averageRating: number | null
+  flagPriority: string
+  flagReason: string | null
+  reviewerName: string | null
+  createdAt: string
+  updatedAt: string
+  evaluationId: string | null
 }
 
 export interface ManagementStats {

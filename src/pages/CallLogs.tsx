@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { apiFetch } from '@/lib/api'
 import { CallDetailsDrawer } from '@/components/CallDetailsDrawer'
 import { CallLogsTable } from '@/components/CallLogsTable'
 import type { CallLog } from '@/types'
 
 export function CallLogs() {
-  const [searchParams, setSearchParams] = useSearchParams()
   const [logs, setLogs] = useState<CallLog[]>([])
   const [selected, setSelected] = useState<CallLog | null>(null)
   const [loading, setLoading] = useState(true)
@@ -42,16 +40,6 @@ export function CallLogs() {
       window.clearInterval(id)
     }
   }, [])
-
-  useEffect(() => {
-    const callId = searchParams.get('callId')
-    if (!callId || logs.length === 0) return
-    const match = logs.find((l) => l.id === callId)
-    if (match) {
-      setSelected(match)
-      setSearchParams({}, { replace: true })
-    }
-  }, [logs, searchParams, setSearchParams])
 
   return (
     <div className="space-y-6">
