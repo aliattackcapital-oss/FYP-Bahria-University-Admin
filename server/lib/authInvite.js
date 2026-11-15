@@ -1,8 +1,13 @@
 import { getSupabaseAdmin } from './supabase.js'
 
+/** Public app origin for invite/recovery redirects (must match Supabase redirect allowlist). */
 export function vocaAppUrl() {
-  const raw = process.env.VOCA_APP_URL?.trim()
-  if (raw) return raw.replace(/\/$/, '')
+  const explicit = process.env.VOCA_APP_URL?.trim()
+  if (explicit) return explicit.replace(/\/$/, '')
+
+  const vercel = process.env.VERCEL_URL?.trim()
+  if (vercel) return `https://${vercel.replace(/^https?:\/\//, '').replace(/\/$/, '')}`
+
   return 'http://localhost:5173'
 }
 
