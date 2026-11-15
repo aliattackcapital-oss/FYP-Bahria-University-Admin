@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { completeAuthFromCurrentUrl } from '@/lib/authSessionFromUrl'
 import { supabase } from '@/lib/supabaseClient'
 import { LoginArt } from '@/components/LoginArt'
 import { VocaLogo } from '@/components/VocaLogo'
@@ -11,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 export function AcceptInvite() {
-  const { loading, isActive, refreshProfile } = useAuth()
+  const { loading, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const [sessionReady, setSessionReady] = useState(false)
   const [hasSession, setHasSession] = useState(false)
@@ -26,22 +27,58 @@ export function AcceptInvite() {
       setSessionReady(true)
       return
     }
-    void supabase.auth.getSession().then(({ data, error: sessionError }) => {
-      if (sessionError) {
-        setError(sessionError.message)
+
+    let cancelled = false
+
+    const client = supabase
+
+    const checkSession = async () => {
+      try {
+        const { data, error: sessionError } = await completeAuthFromCurrentUrl(client)
+        if (cancelled) return
+        if (sessionError) {
+          setError(sessionError.message)
+          setSessionReady(true)
+          return
+        }
+        if (data.session) {
+          setHasSession(true)
+          setError(null)
+          setSessionReady(true)
+          return
+        }
+        setError(
+          'Invite session not found. Open the invitation link again, or ask your super admin for a new one.',
+        )
         setSessionReady(true)
-        return
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Could not verify invitation')
+          setSessionReady(true)
+        }
       }
-      if (data.session) {
+    }
+
+    void checkSession()
+
+    const {
+      data: { subscription },
+    } = client.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return
+      if (
+        session &&
+        (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY')
+      ) {
         setHasSession(true)
+        setError(null)
         setSessionReady(true)
-        return
       }
-      setError(
-        'Invite session not found. Open the invitation link again, or ask your super admin for a new one.',
-      )
-      setSessionReady(true)
     })
+
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
   }, [])
 
   if (loading || !sessionReady) {
@@ -50,10 +87,6 @@ export function AcceptInvite() {
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     )
-  }
-
-  if (isActive) {
-    return <Navigate to="/" replace />
   }
 
   const handleSetPassword = async (event: React.FormEvent) => {

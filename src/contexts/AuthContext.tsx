@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { Member } from '@/types'
+import { completeAuthFromCurrentUrl, isAcceptInvitePath } from '@/lib/authSessionFromUrl'
 import { supabase, supabaseConfigured } from '@/lib/supabaseClient'
 
 export type OrgRole = 'super_admin' | 'admin' | 'front_desk'
@@ -90,6 +91,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       applyProfile(null, null, null, 'Supabase auth is not configured in the app.')
       return
     }
+
+    if (isAcceptInvitePath()) {
+      const { data } = await completeAuthFromCurrentUrl(supabase)
+      const token = data.session?.access_token
+      if (token) {
+        applyProfile(token, null, null, null)
+      } else {
+        applyProfile(null, null, null, null)
+      }
+      return
+    }
+
     const { data } = await supabase.auth.getSession()
     const token = data.session?.access_token
     if (!token) {
@@ -126,7 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         void refreshProfile()
       }
       if (event === 'SIGNED_OUT') {
