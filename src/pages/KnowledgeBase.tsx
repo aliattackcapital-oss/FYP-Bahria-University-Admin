@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { FileUp, Files, Globe, Loader2, Plus } from 'lucide-react'
+import { apiFetch } from '@/lib/api'
 import type { KnowledgeBaseSource, KnowledgeBaseStatus } from '@/types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -82,9 +83,10 @@ export function KnowledgeBase() {
     setSources(data.sources ?? [])
   }
 
-  const load = async () => {
+  const load = async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true)
     try {
-      const response = await fetch('/api/knowledge-base')
+      const response = await apiFetch('/api/knowledge-base')
       const data = (await response.json()) as {
         name?: string
         status?: KnowledgeBaseStatus
@@ -107,7 +109,7 @@ export function KnowledgeBase() {
 
   useEffect(() => {
     if (status !== 'in_progress' && status !== 'refreshing_in_progress') return
-    const id = window.setInterval(() => void load(), 4000)
+    const id = window.setInterval(() => void load({ silent: true }), 4000)
     return () => window.clearInterval(id)
   }, [status])
 
@@ -130,7 +132,7 @@ export function KnowledgeBase() {
     setSaving(true)
     setError(null)
     try {
-      const response = await fetch('/api/knowledge-base', {
+      const response = await apiFetch('/api/knowledge-base', {
         method: 'POST',
         body,
       })
@@ -171,7 +173,7 @@ export function KnowledgeBase() {
     setFoundUrls([])
     setSelectedUrls([])
     try {
-      const response = await fetch('/api/knowledge-base/sitemap', {
+      const response = await apiFetch('/api/knowledge-base/sitemap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
@@ -256,7 +258,18 @@ export function KnowledgeBase() {
 
       {error && (
         <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>{error}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 border-destructive/40 bg-background"
+              onClick={() => void load()}
+            >
+              Retry
+            </Button>
+          </AlertDescription>
         </Alert>
       )}
       {saving && (
@@ -267,7 +280,7 @@ export function KnowledgeBase() {
         <p className="text-sm text-muted-foreground">Loading documents…</p>
       )}
 
-      {!loading && sources.length === 0 && (
+      {!loading && !error && sources.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed bg-card px-6 py-16 text-center">
           <div className="mb-4 flex size-14 items-center justify-center rounded-xl bg-muted">
             <Files className="size-6 text-muted-foreground" />

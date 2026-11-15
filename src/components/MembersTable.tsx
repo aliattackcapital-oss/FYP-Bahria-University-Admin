@@ -1,5 +1,6 @@
 import type { Member, MemberRole, MemberStatus } from '@/types'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -11,6 +12,10 @@ import {
 
 interface MembersTableProps {
   members: Member[]
+  canManage?: boolean
+  onSuspend?: (memberId: string) => void
+  onReactivate?: (memberId: string) => void
+  onRecoveryLink?: (memberId: string) => void
 }
 
 function initials(name: string) {
@@ -33,15 +38,24 @@ function formatDate(iso: string) {
 }
 
 function roleVariant(role: MemberRole) {
+  if (role === 'Super Admin') return 'default' as const
   if (role === 'Admin') return 'default' as const
   return 'outline' as const
 }
 
 function statusVariant(status: MemberStatus) {
-  return status === 'Active' ? ('secondary' as const) : ('outline' as const)
+  if (status === 'Active') return 'secondary' as const
+  if (status === 'Suspended') return 'destructive' as const
+  return 'outline' as const
 }
 
-export function MembersTable({ members }: MembersTableProps) {
+export function MembersTable({
+  members,
+  canManage = false,
+  onSuspend,
+  onReactivate,
+  onRecoveryLink,
+}: MembersTableProps) {
   return (
     <div className="overflow-x-auto rounded-xl border bg-card">
       <Table>
@@ -52,6 +66,7 @@ export function MembersTable({ members }: MembersTableProps) {
             <TableHead className="h-12 px-4">Department</TableHead>
             <TableHead className="h-12 px-4">Status</TableHead>
             <TableHead className="h-12 px-4">Joined</TableHead>
+            {canManage ? <TableHead className="h-12 px-4">Actions</TableHead> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -82,6 +97,43 @@ export function MembersTable({ members }: MembersTableProps) {
               <TableCell className="px-4 py-4 text-muted-foreground">
                 {formatDate(member.joinedAt)}
               </TableCell>
+              {canManage ? (
+                <TableCell className="px-4 py-4">
+                  {member.orgRole === 'super_admin' ? (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  ) : member.orgStatus === 'suspended' ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onReactivate?.(member.id)}
+                    >
+                      Reactivate
+                    </Button>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onSuspend?.(member.id)}
+                      >
+                        Suspend
+                      </Button>
+                      {onRecoveryLink && member.orgStatus === 'active' ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onRecoveryLink(member.id)}
+                        >
+                          Recovery link
+                        </Button>
+                      ) : null}
+                    </div>
+                  )}
+                </TableCell>
+              ) : null}
             </TableRow>
           ))}
         </TableBody>

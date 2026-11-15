@@ -20,16 +20,23 @@ export interface CallLog {
 
 export type CallStatus = 'idle' | 'connecting' | 'in_call' | 'ended'
 
-export type MemberRole = 'Admin' | 'Front Desk' | 'Academic' | 'IT'
-export type MemberStatus = 'Active' | 'Invited'
+export type MemberRole =
+  | 'Super Admin'
+  | 'Admin'
+  | 'Front Desk'
+  | 'Academic'
+  | 'IT'
+export type MemberStatus = 'Active' | 'Invited' | 'Suspended'
 
 export interface Member {
   id: string
   name: string
   email: string
   role: MemberRole
+  orgRole?: 'super_admin' | 'admin' | 'front_desk'
   department: string
   status: MemberStatus
+  orgStatus?: 'active' | 'invited' | 'suspended'
   joinedAt: string
 }
 
@@ -42,6 +49,35 @@ export interface Creator {
   role: CreatorRole
   /** Filename under `public/creators/`, e.g. `ali-rashid.jpg` */
   photo: string
+}
+
+export type EvaluationVerdict =
+  | 'correct'
+  | 'partially_correct'
+  | 'incorrect'
+  | 'unable_to_assess'
+
+export interface CallEvaluation {
+  id: string
+  call_id: string
+  verdict: EvaluationVerdict
+  notes: string | null
+  reviewer_member_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ManagementStats {
+  activeMembers: number
+  invitedMembers: number
+  suspendedMembers: number
+  pendingInvites: number
+  totalCalls: number
+  evaluatedCalls: number
+  unevaluatedCalls: number
+  evaluationRate: number
+  verdicts: Record<string, number>
+  evaluationsEnabled: boolean
 }
 
 export interface DashboardStats {

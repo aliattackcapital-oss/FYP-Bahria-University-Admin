@@ -14,7 +14,11 @@ import { Label } from '@/components/ui/label'
 interface InviteMemberSheetProps {
   open: boolean
   onClose: () => void
-  onInvite: (member: { name: string; email: string }) => string | void
+  onInvite: (member: {
+    name: string
+    email: string
+    role: 'admin' | 'front_desk'
+  }) => string | void | Promise<string | void>
 }
 
 export function InviteMemberSheet({
@@ -24,11 +28,14 @@ export function InviteMemberSheet({
 }: InviteMemberSheetProps) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [role, setRole] = useState<'admin' | 'front_desk'>('front_desk')
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const reset = () => {
     setName('')
     setEmail('')
+    setRole('front_desk')
     setError('')
   }
 
@@ -41,22 +48,27 @@ export function InviteMemberSheet({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    const problem = onInvite({ name: name.trim(), email: email.trim() })
-    if (problem) {
-      setError(problem)
-      return
-    }
-    handleOpenChange(false)
+    setSaving(true)
+    void Promise.resolve(
+      onInvite({ name: name.trim(), email: email.trim(), role }),
+    )
+      .then((problem) => {
+        if (problem) {
+          setError(problem)
+          return
+        }
+        handleOpenChange(false)
+      })
+      .finally(() => setSaving(false))
   }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add a member</DialogTitle>
+          <DialogTitle>Invite a member</DialogTitle>
           <DialogDescription>
-            Invite this person to the organization. They will appear as invited
-            in the members list.
+            After you submit, copy the invitation link once and send it securely. They must use this exact email to accept and set a password.
           </DialogDescription>
         </DialogHeader>
 
@@ -92,6 +104,18 @@ export function InviteMemberSheet({
               required
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="invite-role">Role</Label>
+            <select
+              id="invite-role"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={role}
+              onChange={(e) => setRole(e.target.value as 'admin' | 'front_desk')}
+            >
+              <option value="front_desk">Front desk</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button
@@ -101,7 +125,9 @@ export function InviteMemberSheet({
             >
               Cancel
             </Button>
-            <Button type="submit">Send invitation</Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? 'Sending…' : 'Send invitation'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

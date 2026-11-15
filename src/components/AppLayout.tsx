@@ -8,7 +8,7 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react'
-import { logout } from '@/lib/auth'
+import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import { ThemeSwitch } from '@/components/ThemeSwitch'
 import { VocaLogo } from '@/components/VocaLogo'
@@ -43,17 +43,26 @@ function navClassName(isActive: boolean) {
 
 export function AppLayout() {
   const navigate = useNavigate()
+  const { member, organizationName, orgRole, signOut } = useAuth()
+  const canViewMembers = orgRole === 'super_admin' || orgRole === 'admin'
+  const navGeneral = canViewMembers
+    ? generalItems
+    : generalItems.filter((item) => item.to !== '/members')
 
   const handleLogout = () => {
-    logout()
-    navigate('/login', { replace: true })
+    void signOut().then(() => navigate('/login', { replace: true }))
   }
 
   return (
     <div className="flex h-svh w-full overflow-hidden bg-background">
       <aside className="hidden h-full w-64 shrink-0 flex-col border-e bg-sidebar text-sidebar-foreground md:flex">
-        <div className="flex h-16 items-center px-4">
+        <div className="flex h-16 flex-col justify-center gap-0.5 px-4">
           <VocaLogo className="text-xl" />
+          {member ? (
+            <p className="truncate text-xs text-muted-foreground">
+              {member.name} · {member.role}
+            </p>
+          ) : null}
         </div>
 
         <Separator />
@@ -64,13 +73,13 @@ export function AppLayout() {
           </p>
           <div className={navClassName(true)}>
             <Building2 className="size-4" />
-            Bahria University
+            {organizationName ?? 'Bahria University'}
           </div>
 
           <p className="mb-1 mt-4 px-2 text-xs font-medium text-muted-foreground">
             General
           </p>
-          {generalItems.map((item) => (
+          {navGeneral.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -126,7 +135,7 @@ export function AppLayout() {
           </div>
 
           <nav className="flex items-center gap-1 md:hidden">
-            {[...generalItems, ...agentSettingsItems, creatorsItem].map((item) => (
+            {[...navGeneral, ...agentSettingsItems, creatorsItem].map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

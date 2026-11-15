@@ -1,3 +1,4 @@
+import { withMemberAuth } from '../../server/lib/apiGuard.js'
 import {
   handleAddKnowledgeSources,
   handleGetKnowledgeBase,
@@ -10,9 +11,9 @@ export const config = {
   },
 }
 
-export default async function handler(req, res) {
+export default withMemberAuth(async function handler(req, res) {
   if (req.method === 'GET') return handleGetKnowledgeBase(req, res)
   if (req.method === 'POST') return handleAddKnowledgeSources(req, res)
   res.setHeader('Allow', 'GET, POST')
   return res.status(405).json({ error: 'Method not allowed' })
-}
+})

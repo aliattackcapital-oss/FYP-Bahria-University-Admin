@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { apiFetch } from '@/lib/api'
 import { PieChart as PieIcon } from 'lucide-react'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import type { CallLog } from '@/types'
@@ -27,7 +28,7 @@ export function IntentBreakdown() {
 
     const load = async () => {
       try {
-        const response = await fetch('/api/call-logs')
+        const response = await apiFetch('/api/call-logs')
         const data = (await response.json()) as { logs?: CallLog[] }
         if (!response.ok || cancelled) return
         const next = {

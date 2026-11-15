@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { apiFetch } from '@/lib/api'
 import { CallDetailsDrawer } from '@/components/CallDetailsDrawer'
 import { CallLogsTable } from '@/components/CallLogsTable'
 import type { CallLog } from '@/types'
@@ -12,7 +13,7 @@ export function CallLogs() {
 
   const loadLogs = async () => {
     try {
-      const response = await fetch('/api/call-logs')
+      const response = await apiFetch('/api/call-logs')
       const data = (await response.json()) as {
         logs?: CallLog[]
         configured?: boolean

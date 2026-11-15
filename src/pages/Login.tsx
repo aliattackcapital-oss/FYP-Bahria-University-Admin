@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
-import { isAuthenticated, login } from '@/lib/auth'
+import { useState } from 'react'
+import { Link, Navigate } from 'react-router-dom'
+import { Loader2 } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 import { LoginArt } from '@/components/LoginArt'
 import { VocaLogo } from '@/components/VocaLogo'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -9,24 +10,37 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 export function Login() {
-  const navigate = useNavigate()
+  const { loading, isActive, error, signInWithPassword } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [localError, setLocalError] = useState<string | null>(null)
 
-  if (isAuthenticated()) {
+  if (loading) {
+    return (
+      <div className="grid min-h-svh place-items-center bg-background">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (isActive) {
     return <Navigate to="/" replace />
   }
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    setError('')
-    if (!login(email, password)) {
-      setError('Invalid email or password. Please try again.')
-      return
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setLocalError(null)
+    setBusy(true)
+    try {
+      await signInWithPassword(email, password)
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : 'Could not sign in')
+      setBusy(false)
     }
-    navigate('/', { replace: true })
   }
+
+  const message = localError || error
 
   return (
     <div className="grid min-h-svh bg-background lg:grid-cols-2">
@@ -37,47 +51,54 @@ export function Login() {
           <div className="mb-8 space-y-2">
             <h1 className="text-3xl font-semibold tracking-tight">Sign in</h1>
             <p className="text-sm text-muted-foreground">
-              Enter your email and password to continue.
+              Use the email and password from your invitation. New staff must use the invite link
+              from a super admin first.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="grid gap-5">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email address</Label>
+          <form className="grid gap-4" onSubmit={(e) => void handleSubmit(e)}>
+            {message ? (
+              <Alert variant="destructive">
+                <AlertDescription>{message}</AlertDescription>
+              </Alert>
+            ) : null}
+
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                autoComplete="username"
-                placeholder="name@example.com"
-                className="h-11"
+                autoComplete="email"
                 value={email}
+                disabled={busy}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
-            <div className="space-y-2">
+            <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
                 autoComplete="current-password"
-                placeholder="********"
-                className="h-11"
                 value={password}
+                disabled={busy}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>
 
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <Button type="submit" className="mt-1 h-11 w-full">
+            <Button type="submit" className="h-11 w-full" disabled={busy}>
+              {busy ? <Loader2 className="animate-spin" /> : null}
               Sign in
             </Button>
+
+            <p className="text-center text-xs text-muted-foreground">
+              Opening an invitation link?{' '}
+              <Link to="/accept-invite" className="text-primary underline-offset-4 hover:underline">
+                Complete invite
+              </Link>
+            </p>
           </form>
         </div>
       </div>

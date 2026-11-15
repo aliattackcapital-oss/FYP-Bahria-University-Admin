@@ -7,4 +7,4 @@ npm install
 npm run dev
 ```
 
-Demo login: `admin@company.com` / `password123`
+Sign in with **email and password** (invite-only). Setup: [`docs/voca-org/AUTH_AND_INVITE_STRATEGY.md`](docs/voca-org/AUTH_AND_INVITE_STRATEGY.md) and [`docs/voca-org/PHASE_1_OPERATOR.md`](docs/voca-org/PHASE_1_OPERATOR.md)

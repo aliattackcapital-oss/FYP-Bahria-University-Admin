@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/api'
 import type { CallStatus } from '@/types'
 import { RetellWebClient } from 'retell-client-js-sdk'
 
@@ -128,7 +129,7 @@ class VoiceAgent {
     this.clearTimers()
     const callId = this.lastCallId
     if (callId) {
-      void fetch('/api/sync-call', {
+      void apiFetch('/api/sync-call', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ callId, wait: true }),
@@ -153,23 +154,28 @@ class VoiceAgent {
     this.setStatus('connecting')
 
     try {
-      const response = await fetch('/api/create-web-call', { method: 'POST' })
+      const response = await apiFetch('/api/create-web-call', { method: 'POST' })
       const data = (await response.json()) as {
         accessToken?: string
         callId?: string
+        transport?: 'gateway' | 'livekit'
+        iceServers?: RTCIceServer[]
         error?: string
         details?: string
       }
 
-      if (!response.ok || !data.accessToken) {
+      if (!response.ok || !data.accessToken || !data.callId) {
         throw new Error(data.error || data.details || 'Could not start the call')
       }
 
-      this.lastCallId = data.callId ?? null
+      this.lastCallId = data.callId
 
       const client = this.ensureClient()
       await client.startCall({
         accessToken: data.accessToken,
+        callId: data.callId,
+        transport: data.transport,
+        iceServers: data.iceServers,
       })
     } catch (error) {
       const message =
@@ -243,7 +249,7 @@ export function getLastCallId() {
 export async function syncLastCall() {
   const callId = voiceAgent.getLastCallId()
   if (!callId) return null
-  const response = await fetch('/api/sync-call', {
+  const response = await apiFetch('/api/sync-call', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ callId, wait: true }),

@@ -1,5 +1,6 @@
 import type { CallLog } from '@/types'
 import { AudioPlayer } from '@/components/AudioPlayer'
+import { CallEvaluationPanel } from '@/components/CallEvaluationPanel'
 import { TranscriptView } from '@/components/TranscriptView'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -69,6 +70,8 @@ export function CallDetailsDrawer({ call, open, onClose }: CallDetailsDrawerProp
               <h3 className="text-sm font-semibold">Recording</h3>
               <AudioPlayer src={call.audioUrl} />
             </section>
+
+            <CallEvaluationPanel callId={call.id} />
 
             <Separator />
 

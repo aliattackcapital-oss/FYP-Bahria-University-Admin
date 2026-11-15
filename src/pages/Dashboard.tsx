@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Clock3, Phone, Timer } from 'lucide-react'
+import { ManagementOverview } from '@/components/ManagementOverview'
 import { IntentBreakdown } from '@/components/IntentBreakdown'
 import { StatCard } from '@/components/StatCard'
+import { useAuth } from '@/contexts/AuthContext'
 import { TalkToAliButton } from '@/components/TalkToAliButton'
+import { apiFetch } from '@/lib/api'
 import type { DashboardStats } from '@/types'
 
 const emptyStats: DashboardStats = {
@@ -16,14 +19,16 @@ const emptyStats: DashboardStats = {
 }
 
 export function Dashboard() {
+  const { orgRole } = useAuth()
   const [stats, setStats] = useState<DashboardStats>(emptyStats)
+  const showManagement = orgRole === 'super_admin' || orgRole === 'admin'
 
   useEffect(() => {
     let cancelled = false
 
     const load = async () => {
       try {
-        const response = await fetch('/api/dashboard-stats')
+        const response = await apiFetch('/api/dashboard-stats')
         const data = (await response.json()) as { stats?: DashboardStats }
         if (!response.ok || cancelled || !data.stats) return
         setStats(data.stats)
@@ -86,6 +91,8 @@ export function Dashboard() {
         />
         <IntentBreakdown />
       </div>
+
+      {showManagement ? <ManagementOverview /> : null}
 
       <TalkToAliButton />
     </div>

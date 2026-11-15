@@ -1,4 +1,5 @@
 import multer from 'multer'
+import { fetchRetell } from './retellFetch.js'
 import { clientError, normalizeHttpUrl } from './urls.js'
 
 function apiKey() {
@@ -22,7 +23,7 @@ export async function fetchKnowledgeBase() {
   if (!key) throw new Error('Missing RETELL_API_KEY.')
   if (!id) throw new Error('Missing RETELL_KNOWLEDGE_BASE_ID.')
 
-  const response = await fetch(
+  const response = await fetchRetell(
     `https://api.retellai.com/get-knowledge-base/${encodeURIComponent(id)}`,
     { headers: { Authorization: `Bearer ${key}` } },
   )
@@ -60,7 +61,7 @@ export async function addKnowledgeSources({ files, urls }) {
     form.append('knowledge_base_urls', JSON.stringify(urlList))
   }
 
-  const response = await fetch(
+  const response = await fetchRetell(
     `https://api.retellai.com/add-knowledge-base-sources/${encodeURIComponent(id)}`,
     {
       method: 'POST',
