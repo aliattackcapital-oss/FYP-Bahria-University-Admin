@@ -50,7 +50,6 @@ async function ensureAuth(req, res, path) {
  */
 export async function dispatchApiRequest(req, res) {
   const path = resolveApiPath(req)
-  req.path = path
   const method = (req.method || 'GET').toUpperCase()
 
   if (path === '/api/health' && method === 'GET') {
@@ -117,7 +116,6 @@ export async function dispatchApiRequest(req, res) {
 /** Express middleware-style guard (keeps parity with prior expressApiGuard). */
 export async function expressApiMiddleware(req, res, next) {
   const path = resolveApiPath(req)
-  req.path = path
   if (!path.startsWith('/api/') && path !== '/api') return next()
   if (isPublicApiPath(path) || isAuthApiPath(path) || isBootstrapPath(path)) {
     return next()
