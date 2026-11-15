@@ -18,8 +18,13 @@ import {
   handleManagementStats,
   handleMemberRecoveryLink,
   handlePreviewSitemap,
+  handleBackfillReviewQueue,
+  handleClaimReviewTask,
+  handleListReviewQueue,
+  handleReassignReviewTask,
   handleRefreshCallLogs,
   handleRevokeOrganizationInvitation,
+  handleStartReviewTask,
   handleSyncCall,
   handleUpdateOrganizationMember,
   handleUpsertCallEvaluation,
@@ -93,6 +98,22 @@ export async function dispatchApiRequest(req, res) {
   }
   if (path === '/api/call-evaluations/list' && method === 'GET') {
     return handleListCallEvaluations(req, res)
+  }
+
+  if (path === '/api/review-queue' && method === 'GET') {
+    return handleListReviewQueue(req, res)
+  }
+  if (path === '/api/review-queue/claim' && method === 'POST') {
+    return handleClaimReviewTask(req, res)
+  }
+  if (path === '/api/review-queue/start' && method === 'POST') {
+    return handleStartReviewTask(req, res)
+  }
+  if (path === '/api/review-queue/reassign' && method === 'POST') {
+    return handleReassignReviewTask(req, res)
+  }
+  if (path === '/api/review-queue/backfill' && method === 'POST') {
+    return handleBackfillReviewQueue(req, res)
   }
 
   if (path === '/api/knowledge-base') {

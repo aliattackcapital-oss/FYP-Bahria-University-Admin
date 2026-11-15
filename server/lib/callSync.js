@@ -315,6 +315,14 @@ export async function persistCallLog(row) {
 
   const { error } = await supabase.from('call_logs').upsert(payload, { onConflict: 'id' })
   if (error) throw new Error(error.message)
+
+  try {
+    const { ensureReviewTaskForCall } = await import('./reviewQueue.js')
+    await ensureReviewTaskForCall(row.id, payload)
+  } catch (taskError) {
+    console.warn('Review task ensure skipped:', taskError?.message || taskError)
+  }
+
   return payload
 }
 

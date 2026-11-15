@@ -4,6 +4,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { AppLayout } from '@/components/AppLayout'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { CallLogs } from '@/pages/CallLogs'
+import { ReviewQueue } from '@/pages/ReviewQueue'
 import { Dashboard } from '@/pages/Dashboard'
 import { AcceptInvite } from '@/pages/AcceptInvite'
 import { Login } from '@/pages/Login'
@@ -58,6 +59,7 @@ export default function App() {
           <Route element={<AppLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="call-logs" element={<CallLogs />} />
+            <Route path="review-queue" element={<ReviewQueue />} />
             <Route path="members" element={<Members />} />
             <Route path="knowledge-base" element={<KnowledgeBase />} />
             <Route path="creators" element={<Creators />} />

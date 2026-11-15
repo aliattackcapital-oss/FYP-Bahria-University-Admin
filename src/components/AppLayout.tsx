@@ -4,6 +4,7 @@ import {
   Building2,
   LayoutDashboard,
   LogOut,
+  ClipboardList,
   PhoneCall,
   Sparkles,
   Users,
@@ -18,6 +19,7 @@ import { Separator } from '@/components/ui/separator'
 const generalItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/call-logs', label: 'Call Logs', icon: PhoneCall, end: false },
+  { to: '/review-queue', label: 'Review queue', icon: ClipboardList, end: false },
   { to: '/members', label: 'Members', icon: Users, end: false },
 ]
 

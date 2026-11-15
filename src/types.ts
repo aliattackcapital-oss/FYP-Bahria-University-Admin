@@ -4,6 +4,35 @@ export interface TranscriptLine {
   timestampSeconds: number
 }
 
+export type ReviewTaskStatus =
+  | 'processing'
+  | 'unassigned'
+  | 'assigned'
+  | 'in_review'
+  | 'completed'
+
+export type ReviewQueueFilter = 'unassigned' | 'mine' | 'open'
+
+export interface ReviewQueueTask {
+  id: string
+  callId: string
+  status: ReviewTaskStatus
+  assignedMemberId: string | null
+  assigneeName: string | null
+  claimedAt: string | null
+  completedAt: string | null
+  createdAt: string
+  call: {
+    name: string
+    phone: string
+    intent: string
+    durationSeconds: number
+    timestamp: string
+    analyzed: boolean
+    summary: string | null
+  } | null
+}
+
 export interface CallLog {
   id: string
   name: string

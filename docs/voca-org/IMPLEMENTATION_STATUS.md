@@ -14,6 +14,7 @@
 
 **Production gate:** Supabase Auth settings + both migrations + Vercel env — **operator required** (see final handoff).
 
-**Full FYP plan (review queue, follow-ups, KB requests, phase 9 E2E):** **NOT_STARTED** — out of handoff scope.
+| FYP 4 | Call review queue (claim per call) | **PASS** | `call_review_tasks`, `/review-queue` UI |
+| FYP 5+ | Review form depth, follow-ups, KB requests, E2E | **NOT_STARTED** | See plan doc |
 
 Status values: `NOT_STARTED` | `IN_PROGRESS` | `PASS` | `BLOCKED`

@@ -15,6 +15,9 @@ export const PERMS = {
   INVITATIONS: ['super_admin'],
   EVALUATIONS: ALL_ROLES,
   MANAGEMENT_STATS: ['super_admin', 'admin'],
+  REVIEW_QUEUE: ALL_ROLES,
+  REVIEW_QUEUE_ASSIGN: ['super_admin', 'admin'],
+  REVIEW_BACKFILL: ['super_admin', 'admin'],
 }
 
 export function memberHasRole(member, allowed) {

@@ -29,6 +29,14 @@ import {
 import { getManagementStats } from './managementStats.js'
 import { forbidUnlessRole, PERMS } from './rbac.js'
 import {
+  backfillReviewTasks,
+  claimReviewTask,
+  listReviewTasks,
+  markReviewInProgress,
+  reassignReviewTask,
+  reviewQueueSchemaReady,
+} from './reviewQueue.js'
+import {
   bootstrapSuperAdmin,
   getOrganizationBySlug,
   listOrganizationMembers,
@@ -681,6 +689,12 @@ export async function handleUpsertCallEvaluation(req, res) {
       entityId: callId,
       metadata: { verdict },
     })
+    try {
+      const { completeReviewTask } = await import('./reviewQueue.js')
+      await completeReviewTask({ organizationId: organization.id, callId })
+    } catch {
+      // queue optional until migration applied
+    }
     return res.json({ evaluation: row })
   } catch (error) {
     console.error('upsert call evaluation failed:', error)
@@ -701,6 +715,124 @@ export async function handleListCallEvaluations(req, res) {
   } catch (error) {
     console.error('list call evaluations failed:', error)
     return res.status(500).json({ error: error.message || 'Failed to list evaluations' })
+  }
+}
+
+export async function handleListReviewQueue(req, res) {
+  if (!forbidUnlessRole(req, res, PERMS.REVIEW_QUEUE)) return
+  const filter = String(req.query?.filter ?? 'unassigned').trim()
+  try {
+    const ready = await reviewQueueSchemaReady()
+    if (!ready) {
+      return res.json({
+        configured: false,
+        schemaReady: false,
+        hint: 'Apply supabase/migrations/20261115193000_call_review_tasks.sql',
+        tasks: [],
+      })
+    }
+    const organization = req.auth.organization
+    const memberId = req.auth.member.id
+    const tasks = await listReviewTasks(organization.id, { filter, memberId })
+    return res.json({ configured: true, tasks })
+  } catch (error) {
+    console.error('list review queue failed:', error)
+    return res.status(500).json({ error: error.message || 'Failed to load review queue' })
+  }
+}
+
+export async function handleClaimReviewTask(req, res) {
+  if (!forbidUnlessRole(req, res, PERMS.REVIEW_QUEUE)) return
+  const callId = String(req.body?.callId ?? '').trim()
+  if (!callId) return res.status(400).json({ error: 'callId is required' })
+  try {
+    const ready = await reviewQueueSchemaReady()
+    if (!ready) {
+      return res.status(503).json({ error: 'Review queue schema is not applied.' })
+    }
+    const organization = req.auth.organization
+    const result = await claimReviewTask({
+      organizationId: organization.id,
+      callId,
+      memberId: req.auth.member.id,
+    })
+    if (!result.ok) return res.status(409).json({ error: result.error })
+    await logActivity({
+      organizationId: organization.id,
+      actorMemberId: req.auth.member.id,
+      action: 'review.claimed',
+      entityType: 'call_log',
+      entityId: callId,
+    })
+    return res.json({ task: result.task })
+  } catch (error) {
+    console.error('claim review task failed:', error)
+    return res.status(500).json({ error: error.message || 'Failed to claim review' })
+  }
+}
+
+export async function handleStartReviewTask(req, res) {
+  if (!forbidUnlessRole(req, res, PERMS.REVIEW_QUEUE)) return
+  const callId = String(req.body?.callId ?? '').trim()
+  if (!callId) return res.status(400).json({ error: 'callId is required' })
+  try {
+    const organization = req.auth.organization
+    const task = await markReviewInProgress({
+      organizationId: organization.id,
+      callId,
+      memberId: req.auth.member.id,
+    })
+    if (!task) return res.status(403).json({ error: 'You have not claimed this call.' })
+    return res.json({ task })
+  } catch (error) {
+    console.error('start review failed:', error)
+    return res.status(500).json({ error: error.message || 'Failed to start review' })
+  }
+}
+
+export async function handleReassignReviewTask(req, res) {
+  if (!forbidUnlessRole(req, res, PERMS.REVIEW_QUEUE_ASSIGN)) return
+  const callId = String(req.body?.callId ?? '').trim()
+  const memberId = String(req.body?.memberId ?? '').trim()
+  if (!callId || !memberId) {
+    return res.status(400).json({ error: 'callId and memberId are required' })
+  }
+  try {
+    const organization = req.auth.organization
+    const task = await reassignReviewTask({
+      organizationId: organization.id,
+      callId,
+      memberId,
+    })
+    if (!task) return res.status(404).json({ error: 'Task not found or not reassignable.' })
+    await logActivity({
+      organizationId: organization.id,
+      actorMemberId: req.auth.member.id,
+      action: 'review.reassigned',
+      entityType: 'call_log',
+      entityId: callId,
+      metadata: { memberId },
+    })
+    return res.json({ task })
+  } catch (error) {
+    console.error('reassign review failed:', error)
+    return res.status(500).json({ error: error.message || 'Failed to reassign' })
+  }
+}
+
+export async function handleBackfillReviewQueue(req, res) {
+  if (!forbidUnlessRole(req, res, PERMS.REVIEW_BACKFILL)) return
+  try {
+    const ready = await reviewQueueSchemaReady()
+    if (!ready) {
+      return res.status(503).json({ error: 'Review queue schema is not applied.' })
+    }
+    const organization = req.auth.organization
+    const result = await backfillReviewTasks(organization.id)
+    return res.json(result)
+  } catch (error) {
+    console.error('backfill review queue failed:', error)
+    return res.status(500).json({ error: error.message || 'Backfill failed' })
   }
 }
 
