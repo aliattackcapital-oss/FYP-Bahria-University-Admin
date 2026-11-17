@@ -11,7 +11,7 @@ export async function getManagementStats(organizationId) {
   const [members, invitations, totalCalls] = await Promise.all([
     listOrganizationMembers(organizationId),
     listInvitations(organizationId).catch(() => []),
-    listCallLogs().then((logs) => logs.length),
+    listCallLogs(organizationId).then((logs) => logs.length),
   ])
 
   const activeMembers = members.filter((m) => m.status === 'active').length

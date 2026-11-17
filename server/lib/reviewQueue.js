@@ -27,8 +27,12 @@ export async function ensureReviewTaskForCall(callId, logRow = null) {
   const supabase = getSupabaseAdmin()
   if (!supabase) return null
 
-  const { organization, schemaReady } = await getOrganizationBySlug()
-  if (!schemaReady || !organization) return null
+  let organizationId = logRow?.organization_id ?? null
+  if (!organizationId) {
+    const { organization, schemaReady } = await getOrganizationBySlug()
+    if (!schemaReady || !organization) return null
+    organizationId = organization.id
+  }
 
   const ready = callReadyForReview(logRow)
   const now = new Date().toISOString()
@@ -48,7 +52,7 @@ export async function ensureReviewTaskForCall(callId, logRow = null) {
     const { data, error } = await supabase
       .from('call_review_tasks')
       .insert({
-        organization_id: organization.id,
+        organization_id: organizationId,
         call_id: callId,
         status: ready ? 'unassigned' : 'processing',
         updated_at: now,

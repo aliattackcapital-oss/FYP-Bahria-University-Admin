@@ -13,7 +13,8 @@ import {
   fetchKnowledgeBase,
   parseKnowledgeFiles,
 } from './knowledgeBase.js'
-import { activateInvitedMember, requireActiveMember } from './auth.js'
+import { activateInvitedMember, resolveSessionProfile } from './auth.js'
+import { resolveVoiceIds } from './orgVoice.js'
 import { createInviteLink, createRecoveryLink } from './authInvite.js'
 import { deliverInvite } from './notificationDelivery.js'
 import {
@@ -49,6 +50,7 @@ import { activityLogsSchemaReady, listActivityLogs } from './activityLogs.js'
 import { getFrontDeskActivityStats } from './frontDeskActivityStats.js'
 import {
   bootstrapSuperAdmin,
+  findMemberByEmailGlobal,
   getOrganizationBySlug,
   listOrganizationMembers,
   logActivity,
@@ -62,16 +64,13 @@ function apiKey() {
   return process.env.RETELL_API_KEY?.replace(/^Bearer\s+/i, '').trim()
 }
 
-function agentId() {
-  return process.env.RETELL_AGENT_ID?.trim()
-}
-
-export async function handleCreateWebCall(_req, res) {
+export async function handleCreateWebCall(req, res) {
   const key = apiKey()
-  const agent = agentId()
+  const organization = req.auth.organization
+  const { agentId: agent } = resolveVoiceIds(organization)
   if (!key || !agent) {
     return res.status(500).json({
-      error: 'Missing RETELL_API_KEY or RETELL_AGENT_ID.',
+      error: 'Voice agent is not configured for this organization.',
     })
   }
 
@@ -99,6 +98,7 @@ export async function handleCreateWebCall(_req, res) {
       try {
         await persistCallLog({
           id: call.call_id,
+          organization_id: organization.id,
           name: 'Web caller',
           phone: '—',
           email: '—',
@@ -111,7 +111,7 @@ export async function handleCreateWebCall(_req, res) {
           transcript: [],
           call_status: 'ongoing',
           analyzed: false,
-          raw_payload: { call_id: call.call_id, call_type: 'web_call' },
+          raw_payload: { call_id: call.call_id, call_type: 'web_call', agent_id: agent },
         })
       } catch (error) {
         console.warn('Pending call log insert failed:', error)
@@ -130,15 +130,16 @@ export async function handleCreateWebCall(_req, res) {
   }
 }
 
-export async function handleDashboardStats(_req, res) {
+export async function handleDashboardStats(req, res) {
+  const organizationId = req.auth?.organization?.id ?? null
   if (!isSupabaseConfigured()) {
     return res.status(200).json({
       configured: false,
-      stats: await getDashboardStats(),
+      stats: await getDashboardStats(organizationId),
     })
   }
   try {
-    const stats = await getDashboardStats()
+    const stats = await getDashboardStats(organizationId)
     return res.json({ stats, configured: true })
   } catch (error) {
     console.error('dashboard stats failed:', error)
@@ -146,12 +147,13 @@ export async function handleDashboardStats(_req, res) {
   }
 }
 
-export async function handleListCallLogs(_req, res) {
+export async function handleListCallLogs(req, res) {
+  const organizationId = req.auth?.organization?.id ?? null
   if (!isSupabaseConfigured()) {
     return res.status(200).json({ logs: [], configured: false })
   }
   try {
-    const logs = await listCallLogs()
+    const logs = await listCallLogs(organizationId)
     return res.json({ logs, configured: true })
   } catch (error) {
     console.error('list call logs failed:', error)
@@ -167,7 +169,8 @@ export async function handleRefreshCallLogs(_req, res) {
   }
 
   try {
-    const existing = await listCallLogs()
+    const organizationId = req.auth?.organization?.id ?? null
+    const existing = await listCallLogs(organizationId)
     const logs = []
     for (const item of existing) {
       try {
@@ -249,11 +252,12 @@ export async function handleWebhook(req, res) {
 
 export async function handleGetAgentPrompt(req, res) {
   if (!forbidUnlessRole(req, res, PERMS.AGENT_PROMPT)) return
-  if (!agentPromptConfigured()) {
+  const organization = req.auth.organization
+  if (!agentPromptConfigured(organization)) {
     return res.json({ configured: false, prompt: null })
   }
   try {
-    const details = await getAgentPromptDetails()
+    const details = await getAgentPromptDetails(organization)
     return res.json({ configured: true, ...details })
   } catch (error) {
     console.error('get agent prompt failed:', error)
@@ -268,12 +272,12 @@ export async function handlePublishAgentPrompt(req, res) {
   if (!forbidUnlessRole(req, res, PERMS.AGENT_PROMPT)) return
   const generalPrompt = req.body?.generalPrompt
   const beginMessage = req.body?.beginMessage
-  if (!agentPromptConfigured()) {
+  const organization = req.auth.organization
+  if (!agentPromptConfigured(organization)) {
     return res.status(503).json({ error: 'Voice agent is not configured.' })
   }
   try {
-    const details = await publishAgentGeneralPrompt(generalPrompt, beginMessage)
-    const organization = req.auth.organization
+    const details = await publishAgentGeneralPrompt(organization, generalPrompt, beginMessage)
     await logActivity({
       organizationId: organization.id,
       actorMemberId: req.auth.member.id,
@@ -293,7 +297,7 @@ export async function handlePublishAgentPrompt(req, res) {
 export async function handleGetKnowledgeBase(req, res) {
   if (!forbidUnlessRole(req, res, PERMS.KB_READ)) return
   try {
-    const kb = await fetchKnowledgeBase()
+    const kb = await fetchKnowledgeBase(req.auth.organization)
     return res.json({
       configured: true,
       name: kb.knowledge_base_name,
@@ -317,7 +321,7 @@ export function handleAddKnowledgeSources(req, res) {
     }
     try {
       const urls = parseUrlField(req.body?.url ?? req.body?.urls)
-      const kb = await addKnowledgeSources({ files: req.files, urls })
+      const kb = await addKnowledgeSources(req.auth.organization, { files: req.files, urls })
       return res.status(201).json({
         configured: true,
         name: kb.knowledge_base_name,
@@ -396,14 +400,7 @@ export async function handleListOrganizationMembers(req, res) {
     return res.status(200).json({ configured: false, members: [] })
   }
   try {
-    const { organization, schemaReady } = await getOrganizationBySlug()
-    if (!schemaReady || !organization) {
-      return res.status(200).json({
-        configured: false,
-        members: [],
-        schemaReady: false,
-      })
-    }
+    const organization = req.auth.organization
     const rows = await listOrganizationMembers(organization.id)
     return res.json({
       configured: true,
@@ -479,6 +476,11 @@ export async function handleInviteOrganizationMember(req, res) {
   try {
     const organization = auth.organization
     const supabase = getSupabaseAdmin()
+
+    const globalMember = await findMemberByEmailGlobal(email)
+    if (globalMember && globalMember.organization_id !== organization.id) {
+      return res.status(409).json({ error: 'That email already belongs to another organization.' })
+    }
 
     const { data: existingMember } = await supabase
       .from('organization_members')
@@ -696,10 +698,10 @@ export async function handleGetCallLogDetail(req, res) {
     if (!forbidUnlessRole(req, res, PERMS.CALL_DETAIL_REVIEW)) return
   } else if (!forbidUnlessRole(req, res, PERMS.CALL_DETAIL)) return
   try {
-    const log = await getCallLogById(callId)
+    const organization = req.auth.organization
+    const log = await getCallLogById(callId, organization?.id ?? null)
     if (!log) return res.status(404).json({ error: 'Call not found.' })
     if (forReview) {
-      const organization = req.auth.organization
       const gate = await assertMemberCanEvaluate({
         organizationId: organization.id,
         callId,
@@ -1051,7 +1053,17 @@ export async function handleAuthActivate(req, res) {
     if (!result.ok) {
       return res.status(result.status).json({ error: result.error })
     }
+    if (result.isPlatform) {
+      return res.json({
+        isPlatform: true,
+        platformOperator: {
+          email: result.platformOperator.email,
+          displayName: result.platformOperator.display_name || result.platformOperator.email,
+        },
+      })
+    }
     return res.json({
+      isPlatform: false,
       member: toClientMember(result.member),
       organization: {
         id: result.organization.id,
@@ -1067,11 +1079,22 @@ export async function handleAuthActivate(req, res) {
 
 export async function handleAuthMe(req, res) {
   try {
-    const result = await requireActiveMember(req)
+    const result = await resolveSessionProfile(req)
     if (!result.ok) {
       return res.status(result.status).json({ error: result.error })
     }
+    if (result.kind === 'platform') {
+      return res.json({
+        isPlatform: true,
+        user: { id: result.user.id, email: result.user.email },
+        platformOperator: {
+          email: result.platformOperator.email,
+          displayName: result.platformOperator.display_name || result.platformOperator.email,
+        },
+      })
+    }
     return res.json({
+      isPlatform: false,
       user: { id: result.user.id, email: result.user.email },
       member: toClientMember(result.member),
       organization: {

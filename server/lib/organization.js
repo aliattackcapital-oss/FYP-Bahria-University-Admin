@@ -27,7 +27,9 @@ export async function getOrganizationBySlug(slug = orgSlug()) {
 
   const { data, error } = await supabase
     .from('organizations')
-    .select('id, slug, name, created_at, updated_at')
+    .select(
+      'id, slug, name, status, website_url, retell_agent_id, retell_knowledge_base_id, retell_llm_id, created_at, updated_at',
+    )
     .eq('slug', slug)
     .maybeSingle()
 
@@ -39,6 +41,64 @@ export async function getOrganizationBySlug(slug = orgSlug()) {
   }
 
   return { configured: true, schemaReady: true, organization: data }
+}
+
+export async function getOrganizationById(organizationId) {
+  const supabase = getSupabaseAdmin()
+  if (!supabase) return null
+  const { data, error } = await supabase
+    .from('organizations')
+    .select(
+      'id, slug, name, status, website_url, retell_agent_id, retell_knowledge_base_id, retell_llm_id, created_at, updated_at',
+    )
+    .eq('id', organizationId)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+export function slugFromOrganizationName(name) {
+  const base = String(name ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48)
+  return base || `org-${Date.now().toString(36)}`
+}
+
+export async function findMemberByEmailGlobal(email) {
+  const supabase = getSupabaseAdmin()
+  if (!supabase) throw new Error('Supabase is not configured')
+  const normalized = normalizeEmail(email)
+  const { data, error } = await supabase
+    .from('organization_members')
+    .select(
+      'id, organization_id, auth_user_id, email, display_name, role, status, invited_at, joined_at, created_at, updated_at',
+    )
+    .eq('email', normalized)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
+export async function resolveOrganizationIdForAgent(agentId) {
+  if (!agentId) return null
+  const supabase = getSupabaseAdmin()
+  if (!supabase) return null
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('id')
+    .eq('retell_agent_id', String(agentId).trim())
+    .eq('status', 'active')
+    .maybeSingle()
+  if (error) {
+    if (isMissingTableError(error)) return null
+    throw error
+  }
+  if (data?.id) return data.id
+  const { organization } = await getOrganizationBySlug()
+  return organization?.id ?? null
 }
 
 export async function findMemberByEmail(organizationId, email) {
@@ -313,6 +373,45 @@ export async function logActivity({
   }
 
   return data
+}
+
+export async function createOrganizationWithVoice({
+  name,
+  slug,
+  websiteUrl,
+  retellAgentId,
+  retellKnowledgeBaseId,
+  retellLlmId,
+}) {
+  const supabase = getSupabaseAdmin()
+  if (!supabase) throw new Error('Supabase is not configured')
+  const { data, error } = await supabase
+    .from('organizations')
+    .insert({
+      name: name.trim(),
+      slug,
+      status: 'active',
+      website_url: websiteUrl || null,
+      retell_agent_id: retellAgentId,
+      retell_knowledge_base_id: retellKnowledgeBaseId,
+      retell_llm_id: retellLlmId,
+    })
+    .select(
+      'id, slug, name, status, website_url, retell_agent_id, retell_knowledge_base_id, retell_llm_id, created_at, updated_at',
+    )
+    .single()
+  if (error) {
+    if (error.code === '23505') throw new Error('An organization with that slug already exists.')
+    throw error
+  }
+  return data
+}
+
+export async function deleteOrganizationById(organizationId) {
+  const supabase = getSupabaseAdmin()
+  if (!supabase) throw new Error('Supabase is not configured')
+  const { error } = await supabase.from('organizations').delete().eq('id', organizationId)
+  if (error) throw error
 }
 
 export function toClientMember(row) {

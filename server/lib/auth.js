@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
-import { getOrganizationBySlug, linkMemberOnLogin, findMemberByEmail } from './organization.js'
-import { getSupabaseAdmin, isSupabaseConfigured } from './supabase.js'
+import {
+  findMemberByEmailGlobal,
+  getOrganizationById,
+  linkMemberOnLogin,
+} from './organization.js'
+import { findPlatformOperatorByEmail, linkPlatformOperatorOnLogin } from './platform.js'
+import { isSupabaseConfigured } from './supabase.js'
 
 function supabaseUrl() {
   return (
@@ -50,6 +55,34 @@ function allowedEmailDomain(email) {
   return domains.includes(domain)
 }
 
+export async function requirePlatformOperator(req) {
+  const token = bearerToken(req)
+  if (!token) {
+    return { ok: false, status: 401, error: 'Sign in required.' }
+  }
+  const user = await getUserFromToken(token)
+  if (!user?.email) {
+    return { ok: false, status: 401, error: 'Invalid or expired session.' }
+  }
+  if (!allowedEmailDomain(user.email)) {
+    return { ok: false, status: 403, error: 'This email domain is not allowed.' }
+  }
+  const operator = await findPlatformOperatorByEmail(user.email)
+  if (!operator || operator.status !== 'active') {
+    return { ok: false, status: 403, error: 'Platform access required.' }
+  }
+  return { ok: true, user, platformOperator: operator }
+}
+
+export async function enforcePlatformOperator(req, res) {
+  const result = await requirePlatformOperator(req)
+  if (!result.ok) {
+    res.status(result.status).json({ error: result.error })
+    return null
+  }
+  return result
+}
+
 export async function requireActiveMember(req) {
   const token = bearerToken(req)
   if (!token) {
@@ -65,12 +98,7 @@ export async function requireActiveMember(req) {
     return { ok: false, status: 403, error: 'This email domain is not allowed.' }
   }
 
-  const { organization, schemaReady } = await getOrganizationBySlug()
-  if (!schemaReady || !organization) {
-    return { ok: false, status: 503, error: 'Organization is not configured.' }
-  }
-
-  let member = await findMemberByEmail(organization.id, user.email)
+  const member = await findMemberByEmailGlobal(user.email)
 
   if (!member) {
     return {
@@ -92,6 +120,11 @@ export async function requireActiveMember(req) {
     }
   }
 
+  const organization = await getOrganizationById(member.organization_id)
+  if (!organization || organization.status === 'deleted') {
+    return { ok: false, status: 403, error: 'Organization is not available.' }
+  }
+
   return { ok: true, user, member, organization }
 }
 
@@ -105,7 +138,11 @@ export async function enforceMember(req, res, options = {}) {
     res.status(403).json({ error: 'Insufficient permissions.' })
     return null
   }
-  return result
+  return {
+    user: result.user,
+    member: result.member,
+    organization: result.organization,
+  }
 }
 
 export async function activateInvitedMember(req) {
@@ -121,37 +158,80 @@ export async function activateInvitedMember(req) {
     return { ok: false, status: 403, error: 'This email domain is not allowed.' }
   }
 
-  const { organization, schemaReady } = await getOrganizationBySlug()
-  if (!schemaReady || !organization) {
-    return { ok: false, status: 503, error: 'Organization is not configured.' }
-  }
+  const displayName =
+    user.user_metadata?.full_name || user.user_metadata?.name || user.email
 
-  const member = await linkMemberOnLogin({
-    organizationId: organization.id,
-    authUserId: user.id,
-    email: user.email,
-    displayName:
-      user.user_metadata?.full_name ||
-      user.user_metadata?.name ||
-      user.email,
-  })
-
-  if (!member) {
+  const member = await findMemberByEmailGlobal(user.email)
+  if (member) {
+    const organization = await getOrganizationById(member.organization_id)
+    if (!organization) {
+      return { ok: false, status: 403, error: 'Organization is not available.' }
+    }
+    const linked = await linkMemberOnLogin({
+      organizationId: organization.id,
+      authUserId: user.id,
+      email: user.email,
+      displayName,
+    })
+    if (!linked) {
+      return {
+        ok: false,
+        status: 403,
+        error: 'No invite found for this account. Contact your super admin.',
+      }
+    }
+    if (linked.status === 'suspended') {
+      return { ok: false, status: 403, error: 'Your account is suspended.' }
+    }
     return {
-      ok: false,
-      status: 403,
-      error: 'No invite found for this account. Contact your super admin.',
+      ok: true,
+      user,
+      member: linked,
+      organization,
+      isPlatform: false,
     }
   }
 
-  if (member.status === 'suspended') {
-    return { ok: false, status: 403, error: 'Your account is suspended.' }
+  const platformOp = await linkPlatformOperatorOnLogin({
+    authUserId: user.id,
+    email: user.email,
+    displayName,
+  })
+  if (platformOp) {
+    return {
+      ok: true,
+      user,
+      platformOperator: platformOp,
+      isPlatform: true,
+    }
   }
 
   return {
-    ok: true,
-    user,
-    member,
-    organization,
+    ok: false,
+    status: 403,
+    error: 'No invite found for this account.',
+  }
+}
+
+export async function resolveSessionProfile(req) {
+  const token = bearerToken(req)
+  if (!token) return { ok: false, status: 401, error: 'Sign in required.' }
+  const user = await getUserFromToken(token)
+  if (!user?.email) return { ok: false, status: 401, error: 'Invalid or expired session.' }
+
+  const memberResult = await requireActiveMember(req)
+  if (memberResult.ok) {
+    return { ok: true, kind: 'organization', ...memberResult }
+  }
+
+  const platformResult = await requirePlatformOperator(req)
+  if (platformResult.ok) {
+    return { ok: true, kind: 'platform', ...platformResult }
+  }
+
+  return {
+    ok: false,
+    status: memberResult.status === 401 ? memberResult.status : 403,
+    error: memberResult.error || platformResult.error || 'Access denied.',
   }
 }

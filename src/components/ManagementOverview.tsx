@@ -54,31 +54,34 @@ export function ManagementOverview() {
         <StatCard
           title="Active members"
           value={stats.activeMembers.toString()}
+          subtitle="Current"
+          showChart={false}
           icon={Users}
-          data={[stats.activeMembers]}
-          labels={['Now']}
+          data={[]}
         />
         <StatCard
           title="Pending invites"
           value={stats.pendingInvites.toString()}
+          subtitle="Current"
+          showChart={false}
           icon={UserRoundCog}
-          data={[stats.pendingInvites]}
-          labels={['Now']}
+          data={[]}
         />
         <StatCard
           title="Review coverage"
           value={`${stats.evaluationRate}%`}
+          subtitle="Of calls evaluated"
+          showChart={false}
           icon={ClipboardCheck}
-          data={[stats.evaluationRate]}
-          labels={['Rate']}
-          valueFormatter={(v) => `${v.toFixed(1)}%`}
+          data={[]}
         />
         <StatCard
           title="Unevaluated calls"
           value={stats.unevaluatedCalls.toString()}
+          subtitle="In queue"
+          showChart={false}
           icon={UserCheck}
-          data={[stats.unevaluatedCalls]}
-          labels={['Queue']}
+          data={[]}
         />
       </div>
       {stats.evaluationsEnabled && verdictLabel ? (

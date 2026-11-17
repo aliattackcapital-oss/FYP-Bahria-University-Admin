@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { AppLayout } from '@/components/AppLayout'
@@ -15,6 +15,8 @@ import { KnowledgeBase } from '@/pages/KnowledgeBase'
 import { FlaggedCallReview } from '@/pages/FlaggedCallReview'
 import { FlaggedCalls } from '@/pages/FlaggedCalls'
 import { Members } from '@/pages/Members'
+import { PlatformDashboard } from '@/pages/PlatformDashboard'
+import { PlatformOrganizations } from '@/pages/PlatformOrganizations'
 
 /** Supabase may send invite tokens to Site URL (/) instead of /accept-invite. */
 function InviteAuthRedirect() {
@@ -50,6 +52,24 @@ function AgentPromptRoute() {
   return <AgentPrompt />
 }
 
+function HomeRoute() {
+  const { isPlatform } = useAuth()
+  if (isPlatform) return <Navigate to="/platform/dashboard" replace />
+  return <Dashboard />
+}
+
+function PlatformShell() {
+  const { isPlatform } = useAuth()
+  if (!isPlatform) return <Navigate to="/" replace />
+  return <Outlet />
+}
+
+function OrgOnlyRoute({ children }: { children: ReactNode }) {
+  const { isPlatform } = useAuth()
+  if (isPlatform) return <Navigate to="/platform/dashboard" replace />
+  return <>{children}</>
+}
+
 function ProtectedRoute() {
   const { loading, isActive } = useAuth()
 
@@ -77,16 +97,28 @@ export default function App() {
         <Route path="/accept-invite" element={<AcceptInvite />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="call-logs" element={<CallLogs />} />
-            <Route path="review-queue" element={<ReviewQueue />} />
-            <Route path="review-queue/:callId" element={<ReviewCall />} />
-            <Route path="activity" element={<ActivityLogs />} />
-            <Route path="flagged-calls" element={<FlaggedCalls />} />
-            <Route path="flagged-calls/:flagId" element={<FlaggedCallReview />} />
-            <Route path="members" element={<Members />} />
-            <Route path="knowledge-base" element={<KnowledgeBaseRoute />} />
-            <Route path="agent-prompt" element={<AgentPromptRoute />} />
+            <Route index element={<HomeRoute />} />
+            <Route path="platform" element={<PlatformShell />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<PlatformDashboard />} />
+              <Route path="organizations" element={<PlatformOrganizations />} />
+            </Route>
+            <Route
+              path="call-logs"
+              element={
+                <OrgOnlyRoute>
+                  <CallLogs />
+                </OrgOnlyRoute>
+              }
+            />
+            <Route path="review-queue" element={<OrgOnlyRoute><ReviewQueue /></OrgOnlyRoute>} />
+            <Route path="review-queue/:callId" element={<OrgOnlyRoute><ReviewCall /></OrgOnlyRoute>} />
+            <Route path="activity" element={<OrgOnlyRoute><ActivityLogs /></OrgOnlyRoute>} />
+            <Route path="flagged-calls" element={<OrgOnlyRoute><FlaggedCalls /></OrgOnlyRoute>} />
+            <Route path="flagged-calls/:flagId" element={<OrgOnlyRoute><FlaggedCallReview /></OrgOnlyRoute>} />
+            <Route path="members" element={<OrgOnlyRoute><Members /></OrgOnlyRoute>} />
+            <Route path="knowledge-base" element={<OrgOnlyRoute><KnowledgeBaseRoute /></OrgOnlyRoute>} />
+            <Route path="agent-prompt" element={<OrgOnlyRoute><AgentPromptRoute /></OrgOnlyRoute>} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

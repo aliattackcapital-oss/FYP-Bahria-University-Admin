@@ -67,10 +67,12 @@ export function Dashboard() {
         <p className="text-sm text-muted-foreground">{pageSubtitle}</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Total Calls"
           value={totalCalls.toLocaleString()}
+          subtitle="All completed calls"
+          chartCaption="Last 7 days"
           icon={Phone}
           data={callsTrend}
           labels={labels}
@@ -78,6 +80,8 @@ export function Dashboard() {
         <StatCard
           title="Average Minutes per Call"
           value={averageMinutesPerCall.toFixed(1)}
+          subtitle="All-time average"
+          chartCaption="Last 7 days"
           icon={Clock3}
           data={avgMinutesTrend}
           labels={labels}
@@ -86,6 +90,8 @@ export function Dashboard() {
         <StatCard
           title="Total Minutes Consumed"
           value={totalMinutesConsumed.toLocaleString()}
+          subtitle="All-time minutes"
+          chartCaption="Last 7 days"
           icon={Timer}
           data={totalMinutesTrend}
           labels={labels}

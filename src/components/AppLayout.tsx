@@ -41,7 +41,7 @@ function navClassName(isActive: boolean) {
 
 export function AppLayout() {
   const navigate = useNavigate()
-  const { member, organizationName, orgRole, signOut } = useAuth()
+  const { member, organizationName, orgRole, signOut, isPlatform, platformDisplayName } = useAuth()
   const canViewMembers =
     orgRole === 'super_admin' || orgRole === 'admin' || orgRole === 'front_desk'
   const isFrontDesk = orgRole === 'front_desk'
@@ -59,6 +59,12 @@ export function AppLayout() {
     : []
   const canAccessKnowledgeBase = orgRole === 'super_admin' || orgRole === 'admin'
   const navAgentSettings = canAccessKnowledgeBase ? agentSettingsItems : []
+  const platformNav = isPlatform
+    ? [
+        { to: '/platform/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: false as const },
+        { to: '/platform/organizations', label: 'Organizations', icon: Building2, end: false as const },
+      ]
+    : []
 
   const handleLogout = () => {
     void signOut().then(() => navigate('/login', { replace: true }))
@@ -69,7 +75,11 @@ export function AppLayout() {
       <aside className="hidden h-full w-64 shrink-0 flex-col border-e bg-sidebar text-sidebar-foreground md:flex">
         <div className="flex h-16 flex-col justify-center gap-0.5 px-4">
           <VocaLogo className="text-xl" />
-          {member ? (
+          {isPlatform ? (
+            <p className="truncate text-xs text-muted-foreground">
+              {platformDisplayName ?? 'Platform'} · Platform admin
+            </p>
+          ) : member ? (
             <p className="truncate text-xs text-muted-foreground">
               {member.name} · {member.role}
             </p>
@@ -79,35 +89,10 @@ export function AppLayout() {
         <Separator />
 
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3">
-          <p className="mb-1 px-2 text-xs font-medium text-muted-foreground">
-            Organization
-          </p>
-          <div className={navClassName(true)}>
-            <Building2 className="size-4" />
-            {organizationName ?? 'Bahria University'}
-          </div>
-
-          <p className="mb-1 mt-4 px-2 text-xs font-medium text-muted-foreground">
-            General
-          </p>
-          {navGeneral.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) => navClassName(isActive)}
-            >
-              <item.icon className="size-4" />
-              {item.label}
-            </NavLink>
-          ))}
-
-          {navAdminOnly.length > 0 ? (
+          {isPlatform ? (
             <>
-              <p className="mb-1 mt-4 px-2 text-xs font-medium text-muted-foreground">
-                Super admin
-              </p>
-              {navAdminOnly.map((item) => (
+              <p className="mb-1 px-2 text-xs font-medium text-muted-foreground">Platform</p>
+              {platformNav.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -119,14 +104,16 @@ export function AppLayout() {
                 </NavLink>
               ))}
             </>
-          ) : null}
-
-          {navAgentSettings.length > 0 ? (
+          ) : (
             <>
-              <p className="mb-1 mt-4 px-2 text-xs font-medium text-muted-foreground">
-                Agent Settings
-              </p>
-              {navAgentSettings.map((item) => (
+              <p className="mb-1 px-2 text-xs font-medium text-muted-foreground">Organization</p>
+              <div className={navClassName(true)}>
+                <Building2 className="size-4" />
+                {organizationName ?? 'Organization'}
+              </div>
+
+              <p className="mb-1 mt-4 px-2 text-xs font-medium text-muted-foreground">General</p>
+              {navGeneral.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -137,8 +124,46 @@ export function AppLayout() {
                   {item.label}
                 </NavLink>
               ))}
+
+              {navAdminOnly.length > 0 ? (
+                <>
+                  <p className="mb-1 mt-4 px-2 text-xs font-medium text-muted-foreground">
+                    Super admin
+                  </p>
+                  {navAdminOnly.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      className={({ isActive }) => navClassName(isActive)}
+                    >
+                      <item.icon className="size-4" />
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </>
+              ) : null}
+
+              {navAgentSettings.length > 0 ? (
+                <>
+                  <p className="mb-1 mt-4 px-2 text-xs font-medium text-muted-foreground">
+                    Agent Settings
+                  </p>
+                  {navAgentSettings.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      className={({ isActive }) => navClassName(isActive)}
+                    >
+                      <item.icon className="size-4" />
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </>
+              ) : null}
             </>
-          ) : null}
+          )}
         </nav>
 
         <div className="mt-auto flex shrink-0 flex-col gap-1 p-3">
@@ -161,7 +186,7 @@ export function AppLayout() {
           </div>
 
           <nav className="flex items-center gap-1 md:hidden">
-            {[...navGeneral, ...navAdminOnly, ...navAgentSettings].map((item) => (
+            {[...platformNav, ...navGeneral, ...navAdminOnly, ...navAgentSettings].map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

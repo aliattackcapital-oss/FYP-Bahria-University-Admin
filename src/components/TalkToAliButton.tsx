@@ -117,7 +117,7 @@ export function TalkToAliButton() {
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div className="space-y-1.5">
-          <CardTitle>Talk to Ali</CardTitle>
+          <CardTitle>Talk to agent</CardTitle>
           <CardDescription>
             Start a live conversation with the 24/7 AI receptionist about
             admissions, fees, classes, and other university questions.
@@ -140,7 +140,7 @@ export function TalkToAliButton() {
               className="relative z-10 min-w-[200px] rounded-full"
             >
               <Mic />
-              Talk to Ali
+              Talk to agent
             </Button>
           </div>
         ) : (

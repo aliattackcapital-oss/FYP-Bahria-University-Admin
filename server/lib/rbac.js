@@ -25,6 +25,7 @@ export const PERMS = {
   CALL_DETAIL_REVIEW: ['front_desk'],
   REVIEW_QUEUE_ASSIGN: ['super_admin', 'admin'],
   REVIEW_BACKFILL: ['super_admin', 'admin'],
+  PLATFORM_ORGANIZATIONS: ['platform'],
 }
 
 export function memberHasRole(member, allowed) {

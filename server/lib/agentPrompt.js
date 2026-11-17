@@ -1,11 +1,12 @@
+import { resolveVoiceIds, voiceConfigured } from './orgVoice.js'
 import { fetchRetell } from './retellFetch.js'
 
 function retellKey() {
   return process.env.RETELL_API_KEY?.replace(/^Bearer\s+/i, '').trim()
 }
 
-function retellAgentId() {
-  return process.env.RETELL_AGENT_ID?.trim()
+function agentIdForOrg(organization) {
+  return resolveVoiceIds(organization).agentId
 }
 
 function authHeaders() {
@@ -34,8 +35,8 @@ async function readError(response) {
   throw err
 }
 
-export function agentPromptConfigured() {
-  return Boolean(retellKey() && retellAgentId())
+export function agentPromptConfigured(organization) {
+  return voiceConfigured(organization)
 }
 
 async function getAgentRecord(agentId) {
@@ -88,11 +89,11 @@ async function getLlmRecord(llmId, llmVersion) {
   return llmRes.json()
 }
 
-export async function getAgentPromptDetails() {
-  if (!agentPromptConfigured()) {
-    throw new Error('Missing RETELL_API_KEY or RETELL_AGENT_ID.')
+export async function getAgentPromptDetails(organization) {
+  if (!agentPromptConfigured(organization)) {
+    throw new Error('Missing voice API key or agent id for this organization.')
   }
-  const agentId = retellAgentId()
+  const agentId = agentIdForOrg(organization)
   const agent = await getAgentRecord(agentId)
   const llmId = agent?.response_engine?.llm_id
   if (!llmId) throw new Error('This agent has no LLM response engine attached.')
@@ -112,16 +113,16 @@ export async function getAgentPromptDetails() {
   }
 }
 
-export async function publishAgentGeneralPrompt(generalPrompt, beginMessage) {
-  if (!agentPromptConfigured()) {
-    throw new Error('Missing RETELL_API_KEY or RETELL_AGENT_ID.')
+export async function publishAgentGeneralPrompt(organization, generalPrompt, beginMessage) {
+  if (!agentPromptConfigured(organization)) {
+    throw new Error('Missing voice API key or agent id for this organization.')
   }
   const prompt = String(generalPrompt ?? '').trim()
   if (!prompt) throw new Error('Prompt cannot be empty.')
   const begin =
     beginMessage === undefined || beginMessage === null ? undefined : String(beginMessage)
 
-  const agentId = retellAgentId()
+  const agentId = agentIdForOrg(organization)
   let agent = await ensureDraftAgent(agentId)
 
   const patchBody = { general_prompt: prompt }
@@ -168,5 +169,5 @@ export async function publishAgentGeneralPrompt(generalPrompt, beginMessage) {
   )
   if (!publishRes.ok) await readError(publishRes)
 
-  return getAgentPromptDetails()
+  return getAgentPromptDetails(organization)
 }

@@ -1,3 +1,4 @@
+import { getOrganizationBySlug, resolveOrganizationIdForAgent } from './organization.js'
 import { getSupabaseAdmin } from './supabase.js'
 
 const PLACEHOLDER =
@@ -240,6 +241,16 @@ export async function persistCallLog(row) {
   const supabase = getSupabaseAdmin()
   if (!supabase) throw new Error('Supabase is not configured')
 
+  let organizationId = row.organization_id ?? null
+  if (!organizationId) {
+    const agentId = row.retell_agent_id ?? row.raw_payload?.agent_id ?? row.raw_payload?.agent_version?.agent_id
+    organizationId = await resolveOrganizationIdForAgent(agentId)
+    if (!organizationId) {
+      const { organization } = await getOrganizationBySlug()
+      organizationId = organization?.id ?? null
+    }
+  }
+
   const { data: existing } = await supabase
     .from('call_logs')
     .select('name, phone, email, enrollment, intent, summary, audio_url, transcript, analyzed, raw_payload')
@@ -257,6 +268,7 @@ export async function persistCallLog(row) {
 
   const payload = {
     ...row,
+    organization_id: organizationId ?? row.organization_id,
     name: keepUnlessAnalysisEmpty(
       row.name,
       existing?.name,
@@ -386,24 +398,25 @@ function lastSevenDays() {
 
 function weekdayLabel(isoDay) {
   const [year, month, day] = isoDay.split('-').map(Number)
-  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-US', {
+  const anchor = new Date(Date.UTC(year, month - 1, day, 12, 0, 0))
+  return new Intl.DateTimeFormat('en-US', {
     weekday: 'short',
-    timeZone: 'UTC',
-  })
+    timeZone: STATS_TZ,
+  }).format(anchor)
 }
 
 function isCompletedCall(row) {
   return (row.duration_seconds ?? 0) > 0 && row.call_status !== 'ongoing'
 }
 
-export async function getDashboardStats() {
+export async function getDashboardStats(organizationId = null) {
   const labels = lastSevenDays().map(weekdayLabel)
   if (!getSupabaseAdmin()) return emptyDashboardStats(labels)
 
   const supabase = getSupabaseAdmin()
-  const { data, error } = await supabase
-    .from('call_logs')
-    .select('duration_seconds, started_at, call_status')
+  let query = supabase.from('call_logs').select('duration_seconds, started_at, call_status')
+  if (organizationId) query = query.eq('organization_id', organizationId)
+  const { data, error } = await query
 
   if (error) throw new Error(error.message)
 
@@ -437,27 +450,30 @@ export async function getDashboardStats() {
   }
 }
 
-export async function getCallLogById(callId) {
+export async function getCallLogById(callId, organizationId = null) {
   const supabase = getSupabaseAdmin()
   if (!supabase) throw new Error('Supabase is not configured')
-  const { data, error } = await supabase
+  let query = supabase
     .from('call_logs')
-    .select('id, name, phone, email, enrollment, intent, duration_seconds, started_at, summary, audio_url, transcript, analyzed, call_status')
+    .select('id, organization_id, name, phone, email, enrollment, intent, duration_seconds, started_at, summary, audio_url, transcript, analyzed, call_status')
     .eq('id', callId)
-    .maybeSingle()
+  if (organizationId) query = query.eq('organization_id', organizationId)
+  const { data, error } = await query.maybeSingle()
   if (error) throw new Error(error.message)
   if (!data) return null
   return toClientCallLog(data)
 }
 
-export async function listCallLogs() {
+export async function listCallLogs(organizationId = null) {
   const supabase = getSupabaseAdmin()
   if (!supabase) throw new Error('Supabase is not configured')
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('call_logs')
     .select('id, name, phone, email, enrollment, intent, duration_seconds, started_at, summary, audio_url, transcript, analyzed, call_status')
     .order('started_at', { ascending: false })
+  if (organizationId) query = query.eq('organization_id', organizationId)
+  const { data, error } = await query
 
   if (error) throw new Error(error.message)
   return (data ?? []).filter(isCompletedCall).map(toClientCallLog)

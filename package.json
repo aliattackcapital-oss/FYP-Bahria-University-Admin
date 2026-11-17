@@ -14,7 +14,10 @@
     "org:bootstrap": "node scripts/bootstrap-organization.mjs",
     "org:smoke": "node scripts/phase1-org-smoke.mjs",
     "db:migrate:eval": "node scripts/apply-migration.mjs supabase/migrations/20261115210000_evaluation_likert_flags.sql",
-    "agent:smoke": "node scripts/agent-prompt-smoke.mjs"
+    "agent:smoke": "node scripts/agent-prompt-smoke.mjs",
+    "db:migrate:platform": "node scripts/apply-migration.mjs supabase/migrations/20261117160000_platform_multitenancy.sql",
+    "db:migrate:org-website": "node scripts/apply-migration.mjs supabase/migrations/20261117170000_organization_website_url.sql",
+    "org:backfill-voice": "node scripts/backfill-bahria-org-voice.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.23",

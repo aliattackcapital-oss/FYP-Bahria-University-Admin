@@ -21,6 +21,8 @@ type AuthState = {
   member: Member | null
   orgRole: OrgRole | null
   organizationName: string | null
+  isPlatform: boolean
+  platformDisplayName: string | null
   error: string | null
 }
 
@@ -48,8 +50,11 @@ async function activateAndLoad(token: string) {
     headers: { Authorization: `Bearer ${token}` },
   })
   const meBody = (await me.json()) as {
+    isPlatform?: boolean
     member?: Member
     organization?: { name: string }
+    platformOperator?: { email: string; displayName: string }
+    user?: { email: string }
     error?: string
   }
   if (!me.ok) {
@@ -67,20 +72,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     member: null,
     orgRole: null,
     organizationName: null,
+    isPlatform: false,
+    platformDisplayName: null,
     error: null,
   })
 
-  const applyProfile = useCallback(
-    (token: string | null, member: Member | null, orgName: string | null, error: string | null) => {
+  const applySession = useCallback(
+    (
+      token: string | null,
+      patch: Partial<AuthState> & { error?: string | null },
+    ) => {
       setState({
         loading: false,
         sessionReady: true,
         accessToken: token,
-        userEmail: member?.email ?? null,
-        member,
-        orgRole: (member?.orgRole as OrgRole | undefined) ?? null,
-        organizationName: orgName,
-        error,
+        userEmail: patch.userEmail ?? null,
+        member: patch.member ?? null,
+        orgRole: patch.orgRole ?? null,
+        organizationName: patch.organizationName ?? null,
+        isPlatform: patch.isPlatform ?? false,
+        platformDisplayName: patch.platformDisplayName ?? null,
+        error: patch.error ?? null,
       })
     },
     [],
@@ -88,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     if (!supabase) {
-      applyProfile(null, null, null, 'Supabase auth is not configured in the app.')
+      applySession(null, { error: 'Supabase auth is not configured in the app.' })
       return
     }
 
@@ -96,9 +108,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data } = await completeAuthFromCurrentUrl(supabase)
       const token = data.session?.access_token
       if (token) {
-        applyProfile(token, null, null, null)
+        applySession(token, {})
       } else {
-        applyProfile(null, null, null, null)
+        applySession(null, {})
       }
       return
     }
@@ -106,22 +118,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = await supabase.auth.getSession()
     const token = data.session?.access_token
     if (!token) {
-      applyProfile(null, null, null, null)
+      applySession(null, {})
       return
     }
     try {
       const body = await activateAndLoad(token)
-      applyProfile(token, body.member ?? null, body.organization?.name ?? null, null)
+      if (body.isPlatform && body.platformOperator) {
+        applySession(token, {
+          userEmail: body.platformOperator.email,
+          isPlatform: true,
+          platformDisplayName: body.platformOperator.displayName,
+          member: null,
+          orgRole: null,
+          organizationName: null,
+          error: null,
+        })
+        return
+      }
+      applySession(token, {
+        userEmail: body.member?.email ?? body.user?.email ?? null,
+        member: body.member ?? null,
+        orgRole: (body.member?.orgRole as OrgRole | undefined) ?? null,
+        organizationName: body.organization?.name ?? null,
+        isPlatform: false,
+        platformDisplayName: null,
+        error: null,
+      })
     } catch (err) {
       await supabase.auth.signOut()
-      applyProfile(
-        null,
-        null,
-        null,
-        err instanceof Error ? err.message : 'Sign-in failed',
-      )
+      applySession(null, {
+        error: err instanceof Error ? err.message : 'Sign-in failed',
+      })
     }
-  }, [applyProfile])
+  }, [applySession])
 
   useEffect(() => {
     if (!supabaseConfigured || !supabase) {
@@ -143,12 +172,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         void refreshProfile()
       }
       if (event === 'SIGNED_OUT') {
-        applyProfile(null, null, null, null)
+        applySession(null, {})
       }
     })
 
     return () => subscription.unsubscribe()
-  }, [applyProfile, refreshProfile])
+  }, [applySession, refreshProfile])
 
   const signInWithPassword = useCallback(
     async (email: string, password: string) => {
@@ -165,13 +194,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     if (supabase) await supabase.auth.signOut()
-    applyProfile(null, null, null, null)
-  }, [applyProfile])
+    applySession(null, {})
+  }, [applySession])
 
   const value = useMemo<AuthContextValue>(
     () => ({
       ...state,
-      isActive: Boolean(state.member && state.member.orgStatus === 'active'),
+      isActive: Boolean(
+        state.isPlatform ||
+          (state.member && state.member.orgStatus === 'active'),
+      ),
       isSuperAdmin: state.orgRole === 'super_admin',
       signInWithPassword,
       signOut,

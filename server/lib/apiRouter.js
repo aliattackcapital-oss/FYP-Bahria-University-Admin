@@ -1,5 +1,12 @@
-import { isAuthApiPath, isBootstrapPath, isPublicApiPath } from './apiGuard.js'
-import { enforceMember } from './auth.js'
+import { isAuthApiPath, isBootstrapPath, isPlatformApiPath, isPublicApiPath } from './apiGuard.js'
+import { enforceMember, enforcePlatformOperator } from './auth.js'
+import {
+  handleBootstrapPlatformOperator,
+  handleCreatePlatformOrganization,
+  handleDeletePlatformOrganization,
+  handleListPlatformOrganizations,
+  handlePlatformUsageStats,
+} from './platformHandlers.js'
 import {
   handleAddKnowledgeSources,
   handleAuthActivate,
@@ -52,6 +59,13 @@ async function ensureAuth(req, res, path) {
   if (isPublicApiPath(path) || isAuthApiPath(path) || isBootstrapPath(path)) {
     return true
   }
+  if (isPlatformApiPath(path)) {
+    const ctx = await enforcePlatformOperator(req, res)
+    if (!ctx) return false
+    req.platformOperator = ctx.platformOperator
+    req.auth = { user: ctx.user, platformOperator: ctx.platformOperator }
+    return true
+  }
   const ctx = await enforceMember(req, res)
   if (!ctx) return false
   req.auth = ctx
@@ -77,6 +91,18 @@ export async function dispatchApiRequest(req, res) {
   if (path === '/api/organization' && method === 'GET') return handleGetOrganization(req, res)
   if (path === '/api/organization/bootstrap' && method === 'POST') {
     return handleBootstrapOrganization(req, res)
+  }
+
+  if (path === '/api/platform/bootstrap' && method === 'POST') {
+    return handleBootstrapPlatformOperator(req, res)
+  }
+  if (path === '/api/platform/usage' && method === 'GET') {
+    return handlePlatformUsageStats(req, res)
+  }
+  if (path === '/api/platform/organizations') {
+    if (method === 'GET') return handleListPlatformOrganizations(req, res)
+    if (method === 'POST') return handleCreatePlatformOrganization(req, res)
+    if (method === 'DELETE') return handleDeletePlatformOrganization(req, res)
   }
   if (path === '/api/organization/members') {
     if (method === 'GET') return handleListOrganizationMembers(req, res)
@@ -168,6 +194,13 @@ export async function expressApiMiddleware(req, res, next) {
   const path = resolveApiPath(req)
   if (!path.startsWith('/api/') && path !== '/api') return next()
   if (isPublicApiPath(path) || isAuthApiPath(path) || isBootstrapPath(path)) {
+    return next()
+  }
+  if (isPlatformApiPath(path)) {
+    const ctx = await enforcePlatformOperator(req, res)
+    if (!ctx) return
+    req.platformOperator = ctx.platformOperator
+    req.auth = { user: ctx.user, platformOperator: ctx.platformOperator }
     return next()
   }
   const ctx = await enforceMember(req, res)

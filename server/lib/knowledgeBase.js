@@ -1,4 +1,5 @@
 import multer from 'multer'
+import { resolveVoiceIds, knowledgeBaseConfigured } from './orgVoice.js'
 import { fetchRetell } from './retellFetch.js'
 import { clientError, normalizeHttpUrl } from './urls.js'
 
@@ -6,8 +7,8 @@ function apiKey() {
   return process.env.RETELL_API_KEY?.replace(/^Bearer\s+/i, '').trim()
 }
 
-export function knowledgeBaseId() {
-  return process.env.RETELL_KNOWLEDGE_BASE_ID?.trim()
+export function knowledgeBaseId(organization) {
+  return resolveVoiceIds(organization).knowledgeBaseId
 }
 
 const upload = multer({
@@ -17,11 +18,11 @@ const upload = multer({
 
 export const parseKnowledgeFiles = upload.array('files', 25)
 
-export async function fetchKnowledgeBase() {
+export async function fetchKnowledgeBase(organization) {
   const key = apiKey()
-  const id = knowledgeBaseId()
+  const id = knowledgeBaseId(organization)
   if (!key) throw new Error('Missing RETELL_API_KEY.')
-  if (!id) throw new Error('Missing RETELL_KNOWLEDGE_BASE_ID.')
+  if (!id) throw new Error('Missing knowledge base id for this organization.')
 
   const response = await fetchRetell(
     `https://api.retellai.com/get-knowledge-base/${encodeURIComponent(id)}`,
@@ -34,11 +35,11 @@ export async function fetchKnowledgeBase() {
   return JSON.parse(details)
 }
 
-export async function addKnowledgeSources({ files, urls }) {
+export async function addKnowledgeSources(organization, { files, urls }) {
   const key = apiKey()
-  const id = knowledgeBaseId()
+  const id = knowledgeBaseId(organization)
   if (!key) throw new Error('Missing RETELL_API_KEY.')
-  if (!id) throw new Error('Missing RETELL_KNOWLEDGE_BASE_ID.')
+  if (!id) throw new Error('Missing knowledge base id for this organization.')
 
   const fileList = files ?? []
   const rawUrls = (urls ?? []).map(String).filter((value) => value.trim())

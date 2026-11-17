@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from 'recharts'
 
 interface MiniChartProps {
@@ -11,17 +12,19 @@ export function MiniChart({
   labels,
   valueFormatter = (v) => String(v),
 }: MiniChartProps) {
+  const gradientId = useId().replace(/:/g, '')
   const chartData = data.map((value, index) => ({
     value,
     label: labels?.[index] ?? `D${index + 1}`,
   }))
+  const hasActivity = chartData.some((point) => point.value > 0)
 
   return (
-    <div className="h-14 w-full">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="h-14 w-full min-w-0">
+      <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
         <AreaChart data={chartData} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
           <defs>
-            <linearGradient id="mini-chart-fill" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="currentColor" stopOpacity={0.25} />
               <stop offset="100%" stopColor="currentColor" stopOpacity={0.02} />
             </linearGradient>
@@ -44,9 +47,9 @@ export function MiniChart({
             dataKey="value"
             stroke="currentColor"
             strokeWidth={2}
-            fill="url(#mini-chart-fill)"
+            fill={`url(#${gradientId})`}
             className="text-primary"
-            dot={false}
+            dot={hasActivity && chartData.length <= 1 ? { r: 3, fill: 'currentColor' } : false}
             isAnimationActive={false}
           />
         </AreaChart>

@@ -188,6 +188,31 @@ export interface DashboardStats {
   labels: string[]
 }
 
+export interface PlatformOrgUsageRow {
+  organizationId: string
+  name: string
+  slug: string
+  totalCalls: number
+  averageMinutesPerCall: number
+  totalMinutesConsumed: number
+  estimatedCostUsd: number
+}
+
+export interface PlatformOrganizationOption {
+  organizationId: string
+  name: string
+  slug: string
+}
+
+export interface PlatformUsageStats {
+  costPerMinute: number
+  selectedOrganizationId: string | null
+  selectedOrganization: PlatformOrganizationOption | null
+  organizations: PlatformOrganizationOption[]
+  overall: DashboardStats & { estimatedCostUsd: number }
+  byOrganization: PlatformOrgUsageRow[]
+}
+
 export type KnowledgeBaseStatus =
   | 'in_progress'
   | 'complete'

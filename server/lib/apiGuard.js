@@ -11,7 +11,11 @@ export function isAuthApiPath(path) {
 }
 
 export function isBootstrapPath(path) {
-  return path === '/api/organization/bootstrap'
+  return path === '/api/organization/bootstrap' || path === '/api/platform/bootstrap'
+}
+
+export function isPlatformApiPath(path) {
+  return path.startsWith('/api/platform/') && !isBootstrapPath(path)
 }
 
 export async function expressApiGuard(req, res, next) {

@@ -5,15 +5,22 @@
  */
 import 'dotenv/config'
 import { getAgentPromptDetails, publishAgentGeneralPrompt } from '../server/lib/agentPrompt.js'
+import { getOrganizationBySlug } from '../server/lib/organization.js'
 
 async function main() {
-  const before = await getAgentPromptDetails()
+  const { organization } = await getOrganizationBySlug()
+  if (!organization) throw new Error('No organization found (apply migrations / set VOCA_ORG_SLUG)')
+  const before = await getAgentPromptDetails(organization)
   if (!before.generalPrompt?.trim()) {
     console.error('agent-prompt-smoke: empty general prompt')
     process.exit(1)
   }
 
-  const after = await publishAgentGeneralPrompt(before.generalPrompt, before.beginMessage ?? '')
+  const after = await publishAgentGeneralPrompt(
+    organization,
+    before.generalPrompt,
+    before.beginMessage ?? '',
+  )
   if (!after.generalPrompt?.trim()) {
     console.error('agent-prompt-smoke: publish returned empty prompt')
     process.exit(1)
